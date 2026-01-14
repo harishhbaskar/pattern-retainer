@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import axios from 'axios';
+// REPLACE axios with your new api instance
+import api from './api/axios'; 
 import Header from './components/Header.jsx';
 import LearningForm from './components/LearningForm.jsx';
 import Dashboard from './components/DashBoard.jsx'; 
@@ -11,21 +12,19 @@ import Register from './components/Register.jsx';
 function App() {
   const [user, setUser] = useState(null);
 
-  
   useEffect(() => {
     const loggedInUser = localStorage.getItem('user');
     if (loggedInUser) {
       const foundUser = JSON.parse(loggedInUser);
       setUser(foundUser);
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${foundUser.token}`;
+  
     }
   }, []);
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    
   };
 
   return (
@@ -40,8 +39,6 @@ function App() {
             path="/register" 
             element={!user ? <Register setUser={setUser} /> : <Navigate to="/" />} 
           />
-          
-          {/* Protected Route */}
           <Route path="/" element={user ? (
             <MainLayout user={user} onLogout={handleLogout} />
           ) : (
@@ -53,12 +50,10 @@ function App() {
   );
 }
 
-
 const MainLayout = ({ user, onLogout }) => {
   const [learnings, setLearnings] = useState([]);
   const [view, setView] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
-  
   
   const [darkMode, setDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -75,25 +70,24 @@ const MainLayout = ({ user, onLogout }) => {
     }
   }, [darkMode]);
 
-  
   const fetchLearnings = async () => {
     setIsLoading(true);
     try {
-      const { data } = await axios.get('http://localhost:5000/api/learnings');
+      
+      const { data } = await api.get('/learnings');
       setLearnings(data);
     } catch (error) {
       console.error("Failed to fetch learnings", error);
-      
     } finally {
       setIsLoading(false);
     }
   };
   
-  
   useEffect(() => { 
     if(user) fetchLearnings(); 
   }, [user]);
 
+  
   return (
     <div className="p-4 md:p-8">
       <div className="max-w-5xl mx-auto">
@@ -101,7 +95,6 @@ const MainLayout = ({ user, onLogout }) => {
            <div className="text-sm text-gray-500">Welcome, <span className="font-bold text-indigo-600 dark:text-indigo-400">{user.name}</span></div>
            <button onClick={onLogout} className="text-sm text-red-500 hover:text-red-600 font-medium cursor-pointer">Logout</button>
         </div>
-        
         
         <Header 
           view={view} 

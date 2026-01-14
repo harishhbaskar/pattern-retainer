@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import api from '../api/axios';
+
+
 
 const Register = ({ setUser }) => {
   const [formData, setFormData] = useState({
@@ -32,11 +35,12 @@ const Register = ({ setUser }) => {
 
     try {
       
-      const res = await axios.post('http://localhost:5000/api/users', {
-        name,
-        email,
-        password,
-      });
+      // const res = await axios.post('http://localhost:5000/api/users', {
+      const res = await api.post('/users', {
+            name,
+            email,
+            password,
+          });
 
       localStorage.setItem('user', JSON.stringify(res.data));
       setUser(res.data);

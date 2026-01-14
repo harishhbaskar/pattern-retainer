@@ -1,12 +1,13 @@
 import { CheckCircle } from 'lucide-react';
 import axios from 'axios';
+import api from '../api/axios';
 
 const Dashboard = ({ learnings, onReview }) => {
   const dueItems = learnings.filter(l => new Date(l.nextReviewDate) <= new Date());
 
   const handleReview = async (id) => {
-    await axios.put(`http://localhost:5000/api/learnings/${id}/review`);
-    onReview(); 
+    await api.put(`/learnings/${id}/review`);
+    onReview();
   };
 
   return (

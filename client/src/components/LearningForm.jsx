@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import axios from 'axios';
+import api from '../api/axios';
+
+
 
 const LearningForm = ({ onAdd }) => {
   const [formData, setFormData] = useState({ topic: '', description: '' });
@@ -9,9 +12,9 @@ const LearningForm = ({ onAdd }) => {
     e.preventDefault();
     if (!formData.topic) return;
 
-    await axios.post('http://localhost:5000/api/learnings', formData);
+    await api.post('/learnings', formData);
     setFormData({ topic: '', description: '' });
-    onAdd(); 
+    onAdd();
   };
 
   return (
