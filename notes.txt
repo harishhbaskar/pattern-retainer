@@ -1,1 +1,2 @@
 server url : https://pattern-retainer.onrender.com
+expo apk link : https://expo.dev/artifacts/eas/fQujxbDxe3Q57xvYn9REyN.apk
