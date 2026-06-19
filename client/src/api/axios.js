@@ -1,7 +1,10 @@
 import axios from 'axios';
 
-// Use the Vite environment variable or fallback to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Automatically switch based on whether Vite is running in development or production mode
+const LOCAL_API_URL = 'http://localhost:5000/api';
+const PROD_API_URL = import.meta.env.VITE_API_URL || 'https://pattern-retainer.onrender.com/api';
+
+const API_URL = import.meta.env.DEV ? LOCAL_API_URL : PROD_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,

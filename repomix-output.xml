@@ -42,23 +42,28 @@ The content is organized as follows:
 <directory_structure>
 client/
   public/
-    vite.svg
+    favicon.png
   src/
     api/
       axios.js
     assets/
       react.svg
     components/
+      AllLearnings.jsx
       CalendarView.jsx
       DashBoard.jsx
       Header.jsx
       LearningForm.jsx
       Login.jsx
+      MainLayout.jsx
+      NotFound.jsx
       Register.jsx
+      StatsPage.jsx
     App.css
     App.jsx
     index.css
     main.jsx
+  .env.example
   .gitignore
   eslint.config.js
   index.html
@@ -207,7 +212,9 @@ mobile/
       _layout.tsx
       add.tsx
       calendar.tsx
+      edit.tsx
       index.tsx
+      stats.tsx
     _layout.tsx
     globals.css
   assets/
@@ -226,6 +233,7 @@ mobile/
     AuthContext.tsx
   utils/
     api.ts
+  .env.example
   .gitignore
   app.json
   babel.config.js
@@ -233,7 +241,6 @@ mobile/
   eslint.config.js
   metro.config.js
   nativewind-env.d.ts
-  notes.txt
   package.json
   README.md
   repomix-output.xml
@@ -253,17 +260,307 @@ server/
   routes/
     learningRoutes.js
     userRoutes.js
+  .env.example
   index.js
   package.json
   repomix-output.xml
-  seed.js
 .gitignore
-notes.txt
 package.json
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="client/src/components/AllLearnings.jsx">
+import { useState } from 'react';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
+import api from '../api/axios';
+
+const AllLearnings = ({ learnings, onUpdate }) => {
+  const [editingId, setEditingId] = useState(null);
+  const [editTopic, setEditTopic] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
+  const handleEditStart = (item) => {
+    setEditingId(item._id);
+    setEditTopic(item.topic);
+    setEditDescription(item.description);
+  };
+
+  const handleEditSave = async (id) => {
+    await api.put(`/learnings/${id}`, { topic: editTopic, description: editDescription });
+    setEditingId(null);
+    onUpdate();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this?')) return;
+    await api.delete(`/learnings/${id}`);
+    onUpdate();
+  };
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">All Learnings ({learnings.length})</h2>
+      {learnings.length === 0 && (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400">Nothing logged yet. Add your first learning!</p>
+        </div>
+      )}
+      {learnings.map((item) => (
+        <div key={item._id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          {editingId === item._id ? (
+            <div className="space-y-2">
+              <input
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none"
+                value={editTopic}
+                onChange={(e) => setEditTopic(e.target.value)}
+              />
+              <textarea
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none resize-none h-20"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button onClick={() => handleEditSave(item._id)} className="flex items-center gap-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
+                  <Check className="w-4 h-4" /> Save
+                </button>
+                <button onClick={() => setEditingId(null)} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
+                  <X className="w-4 h-4" /> Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Stage {item.stage}</span>
+                </div>
+                <h3 className="font-bold text-gray-900 dark:text-white">{item.topic}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{item.description}</p>
+              </div>
+              <div className="flex gap-2 ml-4">
+                <button onClick={() => handleEditStart(item)} className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default AllLearnings;
+</file>
+
+<file path="client/src/components/MainLayout.jsx">
+import { useState, useEffect } from 'react';
+import api from '../api/axios'; 
+import Header from './Header.jsx';
+import LearningForm from './LearningForm.jsx';
+import Dashboard from './DashBoard.jsx'; 
+import CalendarView from './CalendarView.jsx';
+import AllLearnings from './AllLearnings.jsx';
+import StatsPage from './StatsPage.jsx';
+
+const MainLayout = ({ user, onLogout }) => {
+  const [learnings, setLearnings] = useState([]);
+  const [view, setView] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  const fetchLearnings = async () => {
+    setIsLoading(true);
+    try {
+      
+      const { data } = await api.get('/learnings');
+      setLearnings(data);
+    } catch (error) {
+      console.error("Failed to fetch learnings", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => { 
+    if(user) fetchLearnings(); 
+  }, [user]);
+
+  
+  return (
+    <div className="p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-4">
+           <div className="text-sm text-gray-500">Welcome, <span className="font-bold text-indigo-600 dark:text-indigo-400">{user.name}</span></div>
+           <button onClick={onLogout} className="text-sm text-red-500 hover:text-red-600 font-medium cursor-pointer">Logout</button>
+        </div>
+        
+        <Header 
+          view={view} 
+          setView={setView} 
+        /> 
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <LearningForm onAdd={fetchLearnings} />
+          </div>
+          <div className="lg:col-span-2">
+            {isLoading ? (
+               <div className="text-center py-10 text-gray-500">Loading patterns...</div>
+            ) : view === 'dashboard' ? (
+              <Dashboard learnings={learnings} onReview={fetchLearnings} />
+            ) : view === 'stats' ? (
+              <StatsPage />
+            ) : view === 'all' ? (
+              <AllLearnings learnings={learnings} onUpdate={fetchLearnings} />
+            ) : (
+              <CalendarView learnings={learnings} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MainLayout;
+</file>
+
+<file path="client/src/components/NotFound.jsx">
+import { useNavigate } from 'react-router-dom';
+
+const NotFound = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">404</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">This page doesn't exist.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer"
+        >
+          Go Home
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default NotFound;
+</file>
+
+<file path="client/src/components/StatsPage.jsx">
+import { useEffect, useState } from 'react';
+import { BookOpen, CheckCircle, Flame, Clock } from 'lucide-react';
+import api from '../api/axios';
+
+const StatCard = ({ icon, label, value, color }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4">
+    <div className={`p-3 rounded-full ${color}`}>
+      {icon}
+    </div>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+    </div>
+  </div>
+);
+
+const StatsPage = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await api.get('/learnings/stats');
+        setStats(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) return (
+    <div className="text-center py-10 text-gray-500">Loading stats...</div>
+  );
+
+  if (!stats) return (
+    <div className="text-center py-10 text-gray-500">Could not load stats.</div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">Your Progress</h2>
+
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard
+          icon={<BookOpen className="w-6 h-6 text-indigo-600" />}
+          label="Total Topics"
+          value={stats.totalTopics}
+          color="bg-indigo-50 dark:bg-indigo-900/30"
+        />
+        <StatCard
+          icon={<Clock className="w-6 h-6 text-red-500" />}
+          label="Due Today"
+          value={stats.dueToday}
+          color="bg-red-50 dark:bg-red-900/30"
+        />
+        <StatCard
+          icon={<CheckCircle className="w-6 h-6 text-green-500" />}
+          label="Reviewed This Week"
+          value={stats.reviewedThisWeek}
+          color="bg-green-50 dark:bg-green-900/30"
+        />
+        <StatCard
+          icon={<Flame className="w-6 h-6 text-orange-500" />}
+          label="Day Streak"
+          value={stats.streak}
+          color="bg-orange-50 dark:bg-orange-900/30"
+        />
+      </div>
+
+      {stats.stageBreakdown.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-white mb-4">Topics by Stage</h3>
+          <div className="space-y-3">
+            {stats.stageBreakdown.map(({ _id: stage, count }) => (
+              <div key={stage} className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Stage {stage}</span>
+                <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3">
+                  <div
+                    className="bg-indigo-500 h-3 rounded-full transition-all"
+                    style={{ width: `${(count / stats.totalTopics) * 100}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-6">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StatsPage;
+</file>
+
+<file path="client/.env.example">
+VITE_API_URL=http://localhost:5000/api
+</file>
 
 <file path="mobile/.git/hooks/applypatch-msg.sample">
 #!/bin/sh
@@ -1246,58 +1543,71 @@ export default function AuthLayout() {
 
 <file path="mobile/app/(auth)/login.tsx">
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
+import { BookOpen } from 'lucide-react-native';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
       const { data } = await api.post('/users/login', { email, password });
       signIn(data);
     } catch (error: any) {
       Alert.alert('Login Failed', error.response?.data?.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View className="flex-1 justify-center p-6 bg-primary">
       <View className="w-full max-w-sm mx-auto">
-        <Text className="text-3xl font-bold text-accent mb-2 text-center">Pattern Retainer</Text>
-        <Text className="text-light-200 text-center mb-8">Welcome back, learner.</Text>
+        <View className="items-center mb-8">
+          <BookOpen size={40} color="#6366f1" />
+          <Text className="text-3xl font-bold text-white mt-3">Pattern Retainer</Text>
+          <Text className="text-text-muted text-center mt-2">Spaced repetition learning logger</Text>
+        </View>
 
         <TextInput
-          className="w-full bg-dark-100 text-white p-4 rounded-lg mb-4 border border-dark-200 focus:border-accent"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-4 border border-input-border"
           placeholder="Email"
-          placeholderTextColor="#9CA4AB"
+          placeholderTextColor="#9ca3af"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
-        
+
         <TextInput
-          className="w-full bg-dark-100 text-white p-4 rounded-lg mb-6 border border-dark-200 focus:border-accent"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-6 border border-input-border"
           placeholder="Password"
-          placeholderTextColor="#9CA4AB"
+          placeholderTextColor="#9ca3af"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
-        <TouchableOpacity 
-          className="w-full bg-accent p-4 rounded-lg items-center active:opacity-90"
+        <TouchableOpacity
+          className="w-full bg-accent p-4 rounded-lg items-center"
           onPress={handleLogin}
+          disabled={loading}
         >
-          <Text className="text-primary font-bold text-lg">Sign In</Text>
+          {loading
+            ? <ActivityIndicator color="#ffffff" />
+            : <Text className="text-white font-bold text-lg">Sign In</Text>
+          }
         </TouchableOpacity>
 
         <View className="mt-6 flex-row justify-center">
-          <Text className="text-light-300">Don't have an account? </Text>
+          <Text className="text-text-muted">Don't have an account? </Text>
           <Link href="/register" asChild>
             <TouchableOpacity>
               <Text className="text-accent font-bold">Sign Up</Text>
@@ -1312,8 +1622,9 @@ export default function Login() {
 
 <file path="mobile/app/(auth)/register.tsx">
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
+import { BookOpen } from 'lucide-react-native';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -1321,43 +1632,52 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
   const handleRegister = async () => {
+    setLoading(true);
     try {
       const { data } = await api.post('/users', { name, email, password });
       signIn(data);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <View className="flex-1 justify-center p-6 bg-primary">
       <View className="w-full max-w-sm mx-auto">
-        <Text className="text-3xl font-bold text-accent mb-8 text-center">Create Account</Text>
+        <View className="items-center mb-8">
+          <BookOpen size={40} color="#6366f1" />
+          <Text className="text-3xl font-bold text-white mt-3">Create Account</Text>
+          <Text className="text-text-muted text-center mt-2">Start retaining patterns today</Text>
+        </View>
 
         <TextInput
-          className="w-full bg-dark-100 text-white p-4 rounded-lg mb-4 border border-dark-200"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-4 border border-input-border"
           placeholder="Full Name"
-          placeholderTextColor="#9CA4AB"
+          placeholderTextColor="#9ca3af"
           value={name}
           onChangeText={setName}
         />
 
         <TextInput
-          className="w-full bg-dark-100 text-white p-4 rounded-lg mb-4 border border-dark-200"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-4 border border-input-border"
           placeholder="Email"
-          placeholderTextColor="#9CA4AB"
+          placeholderTextColor="#9ca3af"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
         
         <TextInput
-          className="w-full bg-dark-100 text-white p-4 rounded-lg mb-6 border border-dark-200"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-6 border border-input-border"
           placeholder="Password"
-          placeholderTextColor="#9CA4AB"
+          placeholderTextColor="#9ca3af"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -1366,12 +1686,16 @@ export default function Register() {
         <TouchableOpacity 
           className="w-full bg-accent p-4 rounded-lg items-center"
           onPress={handleRegister}
+          disabled={loading}
         >
-          <Text className="text-primary font-bold text-lg">Sign Up</Text>
+          {loading
+            ? <ActivityIndicator color="#ffffff" />
+            : <Text className="text-white font-bold text-lg">Sign Up</Text>
+          }
         </TouchableOpacity>
 
         <View className="mt-6 flex-row justify-center">
-          <Text className="text-light-300">Already have an account? </Text>
+          <Text className="text-text-muted">Already have an account? </Text>
           <Link href="/login" asChild>
             <TouchableOpacity>
               <Text className="text-accent font-bold">Log In</Text>
@@ -1385,17 +1709,31 @@ export default function Register() {
 </file>
 
 <file path="mobile/app/(tabs)/_layout.tsx">
+import { useState, useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { Home, PlusCircle, Calendar as CalendarIcon, LogOut } from 'lucide-react-native'; 
+import { Home, PlusCircle, Calendar as CalendarIcon, BarChart2, LogOut } from 'lucide-react-native'; 
 import { TouchableOpacity } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 export default function TabLayout() {
   const { signOut } = useAuth();
+  const [dueCount, setDueCount] = useState<number | undefined>(undefined);
 
-  
-  const BAR_BG = "#1c1a2e";
-  const BORDER_COLOR = "#2E2B40";
+  useEffect(() => {
+    const fetchDueCount = async () => {
+      try {
+        const { data } = await api.get('/learnings/stats');
+        setDueCount(data.dueToday > 0 ? data.dueToday : undefined);
+      } catch (e) {
+        // silently fail, badge is non-critical
+      }
+    };
+    fetchDueCount();
+  }, []);
+
+  const BAR_BG = "#1f2937";
+  const BORDER_COLOR = "#374151";
 
   return (
     <Tabs
@@ -1408,7 +1746,7 @@ export default function TabLayout() {
           elevation: 0, 
           shadowOpacity: 0 
         },
-        headerTintColor: '#AB8BFF', 
+        headerTintColor: '#6366f1', 
 
         
         tabBarStyle: { 
@@ -1419,8 +1757,8 @@ export default function TabLayout() {
           paddingBottom: 22,
           paddingTop: 8
         },
-        tabBarActiveTintColor: '#AB8BFF',
-        tabBarInactiveTintColor: '#9CA4AB',
+        tabBarActiveTintColor: '#6366f1',
+        tabBarInactiveTintColor: '#9ca3af',
       }}
     >
       <Tabs.Screen
@@ -1428,6 +1766,8 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarBadge: dueCount,
+          tabBarBadgeStyle: { backgroundColor: '#6366f1' },
           headerRight: () => (
             <TouchableOpacity onPress={signOut} className="mr-4">
               <LogOut size={20} color="#ef4444" />
@@ -1449,6 +1789,13 @@ export default function TabLayout() {
         options={{
           title: 'New',
           tabBarIcon: ({ color }) => <PlusCircle size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: 'Stats',
+          tabBarIcon: ({ color }) => <BarChart2 size={24} color={color} />,
         }}
       />
     </Tabs>
@@ -1487,21 +1834,21 @@ export default function AddLearning() {
   };
 
   return (
-    <View className="flex-1 bg-secondary p-6">
-      <Text className="text-light-200 text-sm font-bold uppercase mb-2">Topic</Text>
+    <View className="flex-1 bg-primary p-6">
+      <Text className="text-text-muted text-sm font-bold uppercase mb-2">Topic</Text>
       <TextInput
-        className="bg-dark-100 text-white p-4 rounded-lg border border-dark-200 focus:border-accent mb-6"
+        className="bg-input-bg text-white p-4 rounded-lg border border-input-border focus:border-accent mb-6"
         placeholder="e.g. React Native Navigation"
-        placeholderTextColor="#9CA4AB"
+        placeholderTextColor="#9ca3af"
         value={topic}
         onChangeText={setTopic}
       />
 
-      <Text className="text-light-200 text-sm font-bold uppercase mb-2">Key Takeaway</Text>
+      <Text className="text-text-muted text-sm font-bold uppercase mb-2">Key Takeaway</Text>
       <TextInput
-        className="bg-dark-100 text-white p-4 rounded-lg border border-dark-200 focus:border-accent mb-8 h-32 text-top"
+        className="bg-input-bg text-white p-4 rounded-lg border border-input-border focus:border-accent mb-8 h-32 text-top"
         placeholder="What did you learn today?"
-        placeholderTextColor="#9CA4AB"
+        placeholderTextColor="#9ca3af"
         multiline
         textAlignVertical="top"
         value={description}
@@ -1509,10 +1856,10 @@ export default function AddLearning() {
       />
 
       <TouchableOpacity 
-        className="bg-accent p-4 rounded-lg items-center active:opacity-90"
+        className="bg-accent p-4 rounded-lg items-center"
         onPress={handleSubmit}
       >
-        <Text className="text-primary font-bold text-lg">Add to Schedule</Text>
+        <Text className="text-white font-bold text-lg">Add to Schedule</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1522,12 +1869,11 @@ export default function AddLearning() {
 <file path="mobile/app/(tabs)/calendar.tsx">
 // app/(tabs)/calendar.tsx
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from 'expo-router';
 import { format } from 'date-fns';
 import api from '../../utils/api';
-import { CheckCircle } from 'lucide-react-native';
 
 type Learning = {
   _id: string;
@@ -1541,18 +1887,40 @@ export default function CalendarScreen() {
   const [learnings, setLearnings] = useState<Learning[]>([]);
   // Default to today's date in YYYY-MM-DD format
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [reviewingIds, setReviewingIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.get('/learnings');
+      setLearnings(data);
+    } catch (e) {
+      console.error(e);
+      setError('Failed to load. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReview = async (id: string, difficulty: 'hard' | 'good' | 'easy') => {
+    try {
+      setReviewingIds(prev => [...prev, id]);
+      await api.put(`/learnings/${id}/review`, { difficulty });
+      const { data } = await api.get('/learnings');
+      setLearnings(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setReviewingIds(prev => prev.filter(rId => rId !== id));
+    }
+  };
 
   // 1. Fetch Data
   useFocusEffect(
     useCallback(() => {
-      const fetchData = async () => {
-        try {
-          const { data } = await api.get('/learnings');
-          setLearnings(data);
-        } catch (e) {
-          console.error(e);
-        }
-      };
       fetchData();
     }, [])
   );
@@ -1576,7 +1944,6 @@ export default function CalendarScreen() {
       ...marks[selectedDate],
       selected: true,
       selectedColor: '#AB8BFF',
-      disableTouchEvent: true,
     };
 
     return marks;
@@ -1588,25 +1955,40 @@ export default function CalendarScreen() {
     return itemDate === selectedDate;
   });
 
+  if (loading) return (
+    <View className="flex-1 items-center justify-center bg-primary">
+      <ActivityIndicator size="large" color="#6366f1" />
+    </View>
+  );
+
+  if (error) return (
+    <View className="flex-1 items-center justify-center bg-primary p-6">
+      <Text className="text-text-muted text-center mb-4">{error}</Text>
+      <TouchableOpacity onPress={fetchData} className="bg-accent px-6 py-3 rounded-lg">
+        <Text className="text-white font-bold">Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <View className="flex-1 bg-secondary">
+    <View className="flex-1 bg-primary">
       {/* Calendar Component */}
       <Calendar
         // Dark Mode Styling
         theme={{
-          backgroundColor: '#030014',
-          calendarBackground: '#030014',
-          textSectionTitleColor: '#9CA4AB',
-          selectedDayBackgroundColor: '#AB8BFF',
-          selectedDayTextColor: '#030014',
-          todayTextColor: '#AB8BFF',
+          backgroundColor: '#111827',
+          calendarBackground: '#111827',
+          textSectionTitleColor: '#9ca3af',
+          selectedDayBackgroundColor: '#6366f1',
+          selectedDayTextColor: '#ffffff',
+          todayTextColor: '#6366f1',
           dayTextColor: '#ffffff',
-          textDisabledColor: '#221f3d',
-          dotColor: '#AB8BFF',
-          selectedDotColor: '#030014',
-          arrowColor: '#AB8BFF',
+          textDisabledColor: '#374151',
+          dotColor: '#6366f1',
+          selectedDotColor: '#ffffff',
+          arrowColor: '#6366f1',
           monthTextColor: '#ffffff',
-          indicatorColor: '#AB8BFF',
+          indicatorColor: '#6366f1',
         }}
         // Handlers
         onDayPress={(day: any) => setSelectedDate(day.dateString)}
@@ -1616,7 +1998,7 @@ export default function CalendarScreen() {
 
       {/* The List of Items for that Day */}
       <View className="flex-1 p-4">
-        <Text className="text-light-200 font-bold mb-4 uppercase text-xs tracking-wider">
+        <Text className="text-text-muted font-bold mb-4 uppercase text-xs tracking-wider">
           Reviews for {format(new Date(selectedDate), 'MMMM do')}
         </Text>
 
@@ -1624,21 +2006,46 @@ export default function CalendarScreen() {
           data={selectedItems}
           keyExtractor={(item) => item._id}
           ListEmptyComponent={
-            <Text className="text-light-300 italic mt-4 text-center">
+            <Text className="text-text-muted italic mt-4 text-center">
               Nothing scheduled for this day.
             </Text>
           }
           renderItem={({ item }) => (
-             <View className="bg-dark-100 p-4 rounded-xl mb-3 border border-dark-200 flex-row items-center justify-between">
+            <View className="bg-card p-4 rounded-xl mb-3 border border-card-border">
+              <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-1 mr-4">
-                    <Text className="text-white font-bold text-lg">{item.topic}</Text>
-                    <Text className="text-light-300 text-xs mt-1" numberOfLines={1}>
-                        Stage {item.stage}
-                    </Text>
+                  <Text className="text-white font-bold text-lg">{item.topic}</Text>
+                  <Text className="text-text-muted text-xs mt-1">
+                    Stage {item.stage}
+                  </Text>
                 </View>
-                {/* Visual indicator that it is done/todo */}
-                <CheckCircle size={20} color="#221f3d" />
-             </View>
+              </View>
+
+              {reviewingIds.includes(item._id) ? (
+                <ActivityIndicator color="#6366f1" />
+              ) : (
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    onPress={() => handleReview(item._id, 'hard')}
+                    className="flex-1 py-2 rounded-lg items-center bg-red-900/30"
+                  >
+                    <Text className="text-red-400 font-bold text-xs">Hard</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleReview(item._id, 'good')}
+                    className="flex-1 py-2 rounded-lg items-center bg-indigo-900/30"
+                  >
+                    <Text className="text-indigo-300 font-bold text-xs">Good</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleReview(item._id, 'easy')}
+                    className="flex-1 py-2 rounded-lg items-center bg-green-900/30"
+                  >
+                    <Text className="text-green-400 font-bold text-xs">Easy</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           )}
         />
       </View>
@@ -1647,11 +2054,97 @@ export default function CalendarScreen() {
 }
 </file>
 
+<file path="mobile/app/(tabs)/edit.tsx">
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import api from '../../utils/api';
+
+export default function EditLearning() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [topic, setTopic] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchLearning = async () => {
+      try {
+        const { data } = await api.get(`/learnings/${id}`);
+        setTopic(data.topic);
+        setDescription(data.description);
+      } catch (e) {
+        Alert.alert('Error', 'Could not load this item');
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLearning();
+  }, [id]);
+
+  const handleSave = async () => {
+    if (!topic.trim()) {
+      Alert.alert('Missing Field', 'Topic is required');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.put(`/learnings/${id}`, { topic, description });
+      router.back();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <View className="flex-1 items-center justify-center bg-primary">
+      <ActivityIndicator size="large" color="#ffffff" />
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-primary p-6">
+      <Text className="text-text-muted text-sm font-bold uppercase mb-2">Topic</Text>
+      <TextInput
+        className="bg-input-bg text-white p-4 rounded-lg border border-input-border mb-6"
+        value={topic}
+        onChangeText={setTopic}
+        placeholderTextColor="#9ca3af"
+      />
+      <Text className="text-text-muted text-sm font-bold uppercase mb-2">Key Takeaway</Text>
+      <TextInput
+        className="bg-input-bg text-white p-4 rounded-lg border border-input-border mb-8 h-32"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        textAlignVertical="top"
+        placeholderTextColor="#9ca3af"
+      />
+      <TouchableOpacity
+        className="bg-accent p-4 rounded-lg items-center"
+        onPress={handleSave}
+        disabled={saving}
+      >
+        {saving
+          ? <ActivityIndicator color="#ffffff" />
+          : <Text className="text-white font-bold text-lg">Save Changes</Text>
+        }
+      </TouchableOpacity>
+    </View>
+  );
+}
+</file>
+
 <file path="mobile/app/(tabs)/index.tsx">
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { CheckCircle } from 'lucide-react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { Swipeable } from 'react-native-gesture-handler';
 import api from '../../utils/api';
 import { format } from 'date-fns';
 
@@ -1664,23 +2157,60 @@ type Learning = {
 };
 
 export default function Dashboard() {
+  const router = useRouter();
   const [learnings, setLearnings] = useState<Learning[]>([]);
+  const [nextUpcoming, setNextUpcoming] = useState<Learning | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchLearnings = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const { data } = await api.get('/learnings');
-      // Filter for items due today or earlier
-      const dueItems = data.filter((l: Learning) => new Date(l.nextReviewDate) <= new Date());
+      const now = new Date();
+      const dueItems = data.filter((l: Learning) => new Date(l.nextReviewDate) <= now);
+      const upcomingItems = data
+        .filter((l: Learning) => new Date(l.nextReviewDate) > now)
+        .sort((a: Learning, b: Learning) => new Date(a.nextReviewDate).getTime() - new Date(b.nextReviewDate).getTime());
+      setNextUpcoming(upcomingItems[0] ?? null);
       setLearnings(dueItems);
     } catch (error) {
       console.error(error);
+      setError('Failed to load. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleReview = async (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      await api.put(`/learnings/${id}/review`);
+      await api.delete(`/learnings/${id}`);
+      fetchLearnings();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete');
+    }
+  };
+
+  const renderRightActions = (id: string) => (
+    <TouchableOpacity
+      onPress={() => {
+        Alert.alert('Delete', 'Are you sure?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) }
+        ]);
+      }}
+      className="bg-red-500 justify-center items-center px-6 rounded-xl mb-4"
+    >
+      <Text className="text-white font-bold">Delete</Text>
+    </TouchableOpacity>
+  );
+
+  const handleReview = async (id: string, difficulty: 'hard' | 'good' | 'easy') => {
+    try {
+      await api.put(`/learnings/${id}/review`, { difficulty });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       fetchLearnings();
     } catch (error) {
       console.error(error);
@@ -1699,40 +2229,103 @@ export default function Dashboard() {
     setRefreshing(false);
   };
 
+  if (loading && !refreshing) return (
+    <View className="flex-1 items-center justify-center bg-primary">
+      <ActivityIndicator size="large" color="#6366f1" />
+    </View>
+  );
+
+  if (error) return (
+    <View className="flex-1 items-center justify-center bg-primary p-6">
+      <Text className="text-text-muted text-center mb-4">{error}</Text>
+      <TouchableOpacity onPress={fetchLearnings} className="bg-accent px-6 py-3 rounded-lg">
+        <Text className="text-white font-bold">Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <View className="flex-1 bg-secondary p-4">
+    <View className="flex-1 bg-primary p-4">
       <FlatList
         data={learnings}
         keyExtractor={(item) => item._id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#AB8BFF" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
         }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center mt-20">
-            <Text className="text-light-300 text-lg">No reviews due today!</Text>
-            <Text className="text-light-300 text-sm mt-2">Check back tomorrow.</Text>
+          <View className="flex-1 items-center justify-center mt-20 px-4">
+            <Text className="text-text-muted text-lg text-center">
+              No reviews due today!
+            </Text>
+            {nextUpcoming ? (
+              <View className="mt-6 bg-card p-4 rounded-xl border border-card-border w-full">
+                <Text className="text-text-muted text-xs uppercase font-bold mb-2">Next Up</Text>
+                <Text className="text-white font-bold text-base">{nextUpcoming.topic}</Text>
+                <Text className="text-text-muted text-xs mt-1">
+                  Due {format(new Date(nextUpcoming.nextReviewDate), 'MMM d')} · Stage {nextUpcoming.stage}
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-text-muted text-sm mt-2 text-center">
+                Add something new to get started.
+              </Text>
+            )}
           </View>
         }
         renderItem={({ item }) => (
-          <View className="bg-dark-100 p-4 rounded-xl mb-4 border-l-4 border-accent">
-            <View className="flex-row justify-between items-start mb-2">
-              <View className="bg-dark-200 px-3 py-1 rounded-full">
-                <Text className="text-accent font-bold text-xs">Stage {item.stage}</Text>
+          <Swipeable renderRightActions={() => renderRightActions(item._id)}>
+            <View className="bg-card p-4 rounded-xl mb-4 border border-card-border border-l-4 border-l-accent">
+              <View className="flex-row justify-between items-start mb-2">
+                <View className="bg-indigo-900/40 px-3 py-1 rounded-full">
+                  <Text className="text-indigo-300 font-bold text-xs">Stage {item.stage}</Text>
+                </View>
+                <Text className="text-text-muted text-xs">{format(new Date(item.nextReviewDate), 'MMM d')}</Text>
               </View>
-              <Text className="text-light-300 text-xs">{format(new Date(item.nextReviewDate), 'MMM d')}</Text>
-            </View>
-            
-            <Text className="text-white text-xl font-bold mb-1">{item.topic}</Text>
-            <Text className="text-light-200 mb-4">{item.description}</Text>
+              
+              <Text className="text-white text-xl font-bold mb-1">{item.topic}</Text>
+              <Text className="text-text-secondary mb-4">{item.description}</Text>
 
-            <TouchableOpacity 
-              onPress={() => handleReview(item._id)}
-              className="flex-row items-center justify-center bg-light-100/10 py-3 rounded-lg active:bg-light-100/20"
-            >
-              <CheckCircle size={18} color="#AB8BFF" />
-              <Text className="text-accent font-bold ml-2">Mark Reviewed</Text>
-            </TouchableOpacity>
-          </View>
+              <View className="flex-row gap-2 mt-3">
+                <TouchableOpacity
+                  onPress={() => handleReview(item._id, 'hard')}
+                  className="flex-1 py-3 rounded-lg items-center bg-red-900/30"
+                >
+                  <Text className="text-red-400 font-bold text-sm">Hard</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleReview(item._id, 'good')}
+                  className="flex-1 py-3 rounded-lg items-center bg-indigo-900/30"
+                >
+                  <Text className="text-indigo-300 font-bold text-sm">Good</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleReview(item._id, 'easy')}
+                  className="flex-1 py-3 rounded-lg items-center bg-green-900/30"
+                >
+                  <Text className="text-green-400 font-bold text-sm">Easy</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/(tabs)/edit', params: { id: item._id } })}
+                className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+              >
+                <Text className="text-white font-bold">Edit</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert('Delete', 'Are you sure?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) }
+                  ]);
+                }}
+                className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+              >
+                <Text className="text-red-400 font-bold">Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </Swipeable>
         )}
       />
     </View>
@@ -1740,16 +2333,113 @@ export default function Dashboard() {
 }
 </file>
 
+<file path="mobile/app/(tabs)/stats.tsx">
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import api from '../../utils/api';
+
+type Stats = {
+  totalTopics: number;
+  dueToday: number;
+  reviewedThisWeek: number;
+  streak: number;
+  stageBreakdown: { _id: number; count: number }[];
+};
+
+const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
+  <View className={`flex-1 p-4 rounded-xl ${color} items-center justify-center`}>
+    <Text className="text-white text-3xl font-bold">{value}</Text>
+    <Text className="text-white/80 text-xs mt-1 text-center">{label}</Text>
+  </View>
+);
+
+export default function StatsScreen() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchStats = async () => {
+        setLoading(true);
+        try {
+          const { data } = await api.get('/learnings/stats');
+          setStats(data);
+        } catch (e) {
+          setError('Could not load stats.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchStats();
+    }, [])
+  );
+
+  if (loading) return (
+    <View className="flex-1 items-center justify-center bg-primary">
+      <ActivityIndicator size="large" color="#6366f1" />
+    </View>
+  );
+
+  if (error || !stats) return (
+    <View className="flex-1 items-center justify-center bg-primary p-6">
+      <Text className="text-text-muted text-center">{error ?? 'No data available.'}</Text>
+    </View>
+  );
+
+  const maxCount = Math.max(...stats.stageBreakdown.map(s => s.count), 1);
+
+  return (
+    <ScrollView className="flex-1 bg-primary p-4">
+      <Text className="text-white text-xl font-bold mb-4">Your Progress</Text>
+
+      <View className="flex-row gap-3 mb-3">
+        <StatCard label="Total Topics" value={stats.totalTopics} color="bg-accent" />
+        <StatCard label="Due Today" value={stats.dueToday} color="bg-danger" />
+      </View>
+      <View className="flex-row gap-3 mb-6">
+        <StatCard label="Reviewed This Week" value={stats.reviewedThisWeek} color="bg-success" />
+        <StatCard label="Day Streak" value={stats.streak} color="bg-warning" />
+      </View>
+
+      {stats.stageBreakdown.length > 0 && (
+        <View className="bg-card rounded-xl p-4">
+          <Text className="text-white font-bold mb-4">Topics by Stage</Text>
+          {stats.stageBreakdown.map(({ _id: stage, count }) => (
+            <View key={stage} className="mb-3">
+              <View className="flex-row justify-between mb-1">
+                <Text className="text-text-secondary text-xs">Stage {stage}</Text>
+                <Text className="text-white text-xs">{count}</Text>
+              </View>
+              <View className="bg-card-border rounded-full h-2">
+                <View
+                  className="bg-accent rounded-full h-2"
+                  style={{ width: `${(count / maxCount) * 100}%` }}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+</file>
+
 <file path="mobile/app/_layout.tsx">
 import { Slot } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "./globals.css"
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <Slot />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <Slot />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 </file>
@@ -1847,10 +2537,11 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-//const API_URL = `http://${process.env.SERVER_IP}:5000/api`;
-// const API_URL = "http://10.235.138.65:5000/api"
-const API_URL = "'https://pattern-retainer-api.onrender.com/api'"
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+if (!API_URL) {
+  console.error("API URL is missing! Check your eas.json or .env");
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -1872,6 +2563,10 @@ api.interceptors.request.use(
 );
 
 export default api;
+</file>
+
+<file path="mobile/.env.example">
+EXPO_PUBLIC_API_URL=http://YOUR_LOCAL_IP:5000/api
 </file>
 
 <file path="mobile/.gitignore">
@@ -1918,6 +2613,16 @@ app-example
 # generated native folders
 /ios
 /android
+
+
+# repomix stuff
+repomix/
+repomix.*
+*.repomix
+
+notes.txt
+
+.env
 </file>
 
 <file path="mobile/app.json">
@@ -1937,10 +2642,8 @@ app-example
     "android": {
       "package": "com.harish.patternretainer",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+          "foregroundImage": "./assets/images/icon.png",
+          "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -1999,14 +2702,24 @@ module.exports = function (api) {
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://YOUR_LOCAL_IP:5000/api"
+      }
     },
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pattern-retainer.onrender.com/api"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://pattern-retainer.onrender.com/api"
+      }
+    }
   },
   "submit": {
     "production": {}
@@ -2040,11 +2753,6 @@ module.exports = withNativeWind(config, { input: './app/globals.css' })
 /// <reference types="nativewind/types" />
 </file>
 
-<file path="mobile/notes.txt">
-demo@example.com
-password123
-</file>
-
 <file path="mobile/package.json">
 {
   "name": "mobile",
@@ -2053,8 +2761,8 @@ password123
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
@@ -2087,7 +2795,7 @@ password123
     "react-native-calendars": "^1.1313.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
-    "react-native-safe-area-context": "~5.6.0",
+    "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-web": "~0.21.0",
@@ -2101,6 +2809,9 @@ password123
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "react-native-safe-area-context": "5.6.2"
   },
   "private": true
 }
@@ -2233,9 +2944,11 @@ utils/
 .gitignore
 app.json
 babel.config.js
+eas.json
 eslint.config.js
 metro.config.js
 nativewind-env.d.ts
+notes.txt
 package.json
 README.md
 tailwind.config.js
@@ -2591,7 +3304,6 @@ export default function CalendarScreen() {
 </file>
 
 <file path="context/AuthContext.tsx">
-// mobile/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from 'expo-router';
@@ -2677,8 +3389,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// REPLACE THIS with your computer's local IP
-const API_URL = 'http://10.235.138.65:5000/api'; 
+
+//const API_URL = `http://${process.env.SERVER_IP}:5000/api`;
+// const API_URL = "http://10.235.138.65:5000/api"
+const API_URL = "https://pattern-retainer-api.onrender.com/api"
 
 
 const api = axios.create({
@@ -2715,6 +3429,30 @@ module.exports = function (api) {
 };
 </file>
 
+<file path="eas.json">
+{
+  "cli": {
+    "version": ">= 16.28.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
+</file>
+
 <file path="metro.config.js">
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require('nativewind/metro');
@@ -2726,6 +3464,11 @@ module.exports = withNativeWind(config, { input: './app/globals.css' })
 
 <file path="nativewind-env.d.ts">
 /// <reference types="nativewind/types" />
+</file>
+
+<file path="notes.txt">
+demo@example.com
+password123
 </file>
 
 <file path="tailwind.config.js">
@@ -2758,21 +3501,40 @@ module.exports = {
 </file>
 
 <file path="app/(tabs)/_layout.tsx">
-// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
-import { Home, PlusCircle, Calendar as CalendarIcon, LogOut } from 'lucide-react-native'; // Import CalendarIcon
+import { Home, PlusCircle, Calendar as CalendarIcon, LogOut } from 'lucide-react-native'; 
 import { TouchableOpacity } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 
 export default function TabLayout() {
   const { signOut } = useAuth();
 
+  
+  const BAR_BG = "#1c1a2e";
+  const BORDER_COLOR = "#2E2B40";
+
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#030014' },
-        headerTintColor: '#AB8BFF',
-        tabBarStyle: { backgroundColor: '#030014', borderTopColor: '#221f3d' },
+        
+        headerStyle: { 
+          backgroundColor: BAR_BG, 
+          borderBottomColor: BORDER_COLOR, 
+          borderBottomWidth: 1,
+          elevation: 0, 
+          shadowOpacity: 0 
+        },
+        headerTintColor: '#AB8BFF', 
+
+        
+        tabBarStyle: { 
+          backgroundColor: BAR_BG, 
+          borderTopColor: BORDER_COLOR,
+          borderTopWidth: 1,
+          height: 60, 
+          paddingBottom: 22,
+          paddingTop: 8
+        },
         tabBarActiveTintColor: '#AB8BFF',
         tabBarInactiveTintColor: '#9CA4AB',
       }}
@@ -2790,7 +3552,6 @@ export default function TabLayout() {
         }}
       />
       
-      {/* NEW CALENDAR TAB */}
       <Tabs.Screen
         name="calendar"
         options={{
@@ -2967,8 +3728,8 @@ app-example
 <file path="app.json">
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Pattern Retainer",
+    "slug": "pattern-retainer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -2979,11 +3740,10 @@ app-example
       "supportsTablet": true
     },
     "android": {
+      "package": "com.harish.patternretainer",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+          "foregroundImage": "./assets/images/icon.png",
+          "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -3010,6 +3770,12 @@ app-example
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "770933b5-6e16-4baf-83e7-ce326423a05d"
+      }
     }
   }
 }
@@ -3170,29 +3936,46 @@ Join our community of developers creating universal apps.
 // tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // 👇 Add "./app/**/*.{js,jsx,ts,tsx}" to this array
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      colors : {
-        primary : "#030014",
-        secondary : "#151312",
-        light : {
-          100:"#D6C6FF",
-          200:"#A8B5D8",
-          300:"#9CA4AB",
+      colors: {
+        // Page backgrounds
+        primary: "#111827",    // gray-900 - main page bg
+        secondary: "#111827",  // same, used interchangeably
+        // Card surfaces
+        card: "#1f2937",       // gray-800
+        "card-border": "#374151", // gray-700
+        // Accent
+        accent: "#6366f1",     // indigo-500
+        "accent-hover": "#4f46e5", // indigo-600
+        // Text
+        "text-primary": "#ffffff",
+        "text-secondary": "#d1d5db", // gray-300
+        "text-muted": "#9ca3af",     // gray-400
+        // Inputs
+        "input-bg": "#374151",   // gray-700
+        "input-border": "#4b5563", // gray-600
+        // Status colors
+        danger: "#ef4444",   // red-500
+        success: "#22c55e",  // green-500
+        warning: "#f59e0b",  // amber-500
+        // Keep these for any legacy references
+        dark: {
+          100: "#1f2937",
+          200: "#374151",
         },
-        dark : {
-          100:"#221f3d",
-          200:"#0f0d23",
+        light: {
+          100: "#f3f4f6",
+          200: "#d1d5db",
+          300: "#9ca3af",
         },
-        accent : "#AB8BFF"
-      }
+      },
     },
   },
   plugins: [],
-}
+};
 </file>
 
 <file path="mobile/tsconfig.json">
@@ -3216,15 +3999,21 @@ module.exports = {
 }
 </file>
 
-<file path="client/public/vite.svg">
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
+<file path="server/.env.example">
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+PORT=5000
+ALLOWED_ORIGIN=http://localhost:5173
 </file>
 
 <file path="client/src/api/axios.js">
 import axios from 'axios';
 
-// Use the Vite environment variable or fallback to localhost
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Automatically switch based on whether Vite is running in development or production mode
+const LOCAL_API_URL = 'http://localhost:5000/api';
+const PROD_API_URL = import.meta.env.VITE_API_URL || 'https://pattern-retainer.onrender.com/api';
+
+const API_URL = import.meta.env.DEV ? LOCAL_API_URL : PROD_API_URL;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -3278,12 +4067,13 @@ export default api;
 import { useState } from 'react';
 import { 
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
-  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths 
+  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isBefore
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CalendarView = ({ learnings }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -3291,8 +4081,15 @@ const CalendarView = ({ learnings }) => {
   const endDate = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
   const getEventsForDay = (date) => {
     return learnings.filter(l => isSameDay(new Date(l.nextReviewDate), date));
+  };
+
+  const isDayOverdue = (date) => {
+    return isBefore(date, today) && getEventsForDay(date).length > 0;
   };
 
   return (
@@ -3326,11 +4123,12 @@ const CalendarView = ({ learnings }) => {
           return (
             <div 
               key={day.toString()} 
-              className={`min-h-[80px] p-2 border-b border-r border-gray-100 dark:border-gray-700 ${
+              onClick={() => setSelectedDate(day)}
+              className={`min-h-[80px] p-2 border-b border-r border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors ${
                 !isSelectedMonth 
                   ? 'bg-gray-50/50 dark:bg-gray-900/30 text-gray-400 dark:text-gray-600' 
                   : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
-              }`}
+              } ${selectedDate && isSameDay(day, selectedDate) ? 'ring-2 ring-inset ring-indigo-400' : ''}`}
             >
               <div className={`text-right mb-1 ${isToday(day) ? 'font-bold text-indigo-600 dark:text-indigo-400' : ''}`}>
                 <span className={isToday(day) ? 'bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-full' : ''}>
@@ -3339,9 +4137,13 @@ const CalendarView = ({ learnings }) => {
               </div>
               <div className="flex flex-col gap-1">
                 {events.map(event => (
-                  <div 
-                    key={event._id} 
-                    className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200 px-1 py-0.5 rounded truncate" 
+                  <div
+                    key={event._id}
+                    className={`text-[10px] px-1 py-0.5 rounded truncate ${
+                      isBefore(day, today)
+                        ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'
+                    }`}
                     title={event.topic}
                   >
                     {event.topic}
@@ -3352,6 +4154,28 @@ const CalendarView = ({ learnings }) => {
           );
         })}
       </div>
+
+      {selectedDate && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-white mb-3">
+            {format(selectedDate, 'MMMM do, yyyy')}
+          </h3>
+          {getEventsForDay(selectedDate).length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Nothing scheduled for this day.</p>
+          ) : (
+            <div className="space-y-2">
+              {getEventsForDay(selectedDate).map(event => (
+                <div key={event._id} className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{event.topic}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Stage {event.stage}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -3360,9 +4184,9 @@ export default CalendarView;
 </file>
 
 <file path="client/src/components/Header.jsx">
-import { BookOpen, Moon, Sun } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
-const Header = ({ view, setView, darkMode, setDarkMode }) => {
+const Header = ({ view, setView }) => {
   return (
     <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
       <div>
@@ -3376,7 +4200,7 @@ const Header = ({ view, setView, darkMode, setDarkMode }) => {
       <div className="flex items-center gap-4">
         {/* View Toggle */}
         <div className="flex gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          {['dashboard', 'calendar'].map((v) => (
+          {['dashboard', 'calendar', 'all', 'stats'].map((v) => (
             <button 
               key={v}
               onClick={() => setView(v)}
@@ -3391,14 +4215,7 @@ const Header = ({ view, setView, darkMode, setDarkMode }) => {
           ))}
         </div>
 
-        
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-          aria-label="Toggle Theme"
-        >
-          {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-        </button>
+
       </div>
     </header>
   );
@@ -3445,33 +4262,6 @@ createRoot(document.getElementById('root')).render(
 )
 </file>
 
-<file path="client/.gitignore">
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-</file>
-
 <file path="client/eslint.config.js">
 import js from '@eslint/js'
 import globals from 'globals'
@@ -3509,9 +4299,9 @@ export default defineConfig([
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href= "/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>client</title>
+    <title>Pattern Retainer</title>
   </head>
   <body>
     <div id="root"></div>
@@ -4482,7 +5272,8 @@ import Learning from "../models/Learning.js";
 
 
 const calculateNextDate = (stage) => {
-  const daysToAdd = Math.pow(2, stage - 1);
+  const MAX_DAYS = 90;
+  const daysToAdd = Math.min(Math.pow(2, stage - 1), MAX_DAYS);
   const nextDate = new Date();
   nextDate.setDate(nextDate.getDate() + daysToAdd);
   return nextDate;
@@ -4491,12 +5282,16 @@ const calculateNextDate = (stage) => {
 export const createLearning = async (req, res) => {
   try {
     const { topic, description } = req.body;
-    const initialStage = 1;
 
+    if (!topic || topic.trim() === '') {
+      return res.status(400).json({ message: 'Topic is required' });
+    }
+
+    const initialStage = 1;
     const newLog = new Learning({
       user: req.user.id,
-      topic,
-      description,
+      topic: topic.trim(),
+      description: description?.trim() || '',
       nextReviewDate: calculateNextDate(initialStage),
       stage: initialStage,
     });
@@ -4527,10 +5322,119 @@ export const reviewLearning = async (req, res) => {
     
     if (!log) return res.status(404).json({ message: "Not found" });
 
-    log.stage += 1;
+    const { difficulty } = req.body;
+
+    if (difficulty === 'hard') {
+      // Hard: stay at same stage (reset interval, don't advance)
+      log.stage = Math.max(1, log.stage - 1);
+    } else if (difficulty === 'easy') {
+      // Easy: skip a stage
+      log.stage += 2;
+    } else {
+      // Good (default): normal progression
+      log.stage += 1;
+    }
+
     log.nextReviewDate = calculateNextDate(log.stage);
+    log.lastReviewedAt = new Date();
     await log.save();
     res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const totalTopics = await Learning.countDocuments({ user: userId });
+
+    const dueToday = await Learning.countDocuments({
+      user: userId,
+      nextReviewDate: { $lte: now },
+    });
+
+    const reviewedThisWeek = await Learning.countDocuments({
+      user: userId,
+      lastReviewedAt: { $gte: weekStart },
+    });
+
+    const stageBreakdown = await Learning.aggregate([
+      { $match: { user: userId } },
+      { $group: { _id: '$stage', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Streak: count consecutive days going back from today that had at least one review
+    const reviews = await Learning.find(
+      { user: userId, lastReviewedAt: { $exists: true } },
+      { lastReviewedAt: 1 }
+    );
+
+    const reviewDays = new Set(
+      reviews.map(r => new Date(r.lastReviewedAt).toDateString())
+    );
+
+    let streak = 0;
+    const check = new Date();
+    while (reviewDays.has(check.toDateString())) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    }
+
+    res.json({
+      totalTopics,
+      dueToday,
+      reviewedThisWeek,
+      streak,
+      stageBreakdown,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+    res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+
+    const { topic, description } = req.body;
+    if (!topic || topic.trim() === '') {
+      return res.status(400).json({ message: 'Topic is required' });
+    }
+
+    log.topic = topic.trim();
+    log.description = description?.trim() || '';
+    await log.save();
+    res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+    await log.deleteOne();
+    res.json({ message: 'Deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -4624,12 +5528,12 @@ export const protect = async (req, res, next) => {
 
       next();
     } catch (error) {
-      res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ message: 'Not authorized' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 </file>
@@ -4638,12 +5542,13 @@ export const protect = async (req, res, next) => {
 import mongoose from "mongoose";
 
 const LearningSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // <--- ADD THIS
-  topic: String,
-  description: String,
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  topic: { type: String, required: true },
+  description: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
-  nextReviewDate: Date,
-  stage: { type: Number, default: 1 } 
+  nextReviewDate: { type: Date, required: true },
+  stage: { type: Number, default: 1 },
+  lastReviewedAt: { type: Date }
 });
 
 const Learning = mongoose.model('Learning', LearningSchema);
@@ -4667,7 +5572,11 @@ import express from "express";
 import { 
   createLearning, 
   getLearnings, 
-  reviewLearning 
+  reviewLearning,
+  deleteLearning,
+  getLearning,
+  updateLearning,
+  getStats
 } from "../controllers/learningController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -4676,6 +5585,10 @@ const router = express.Router();
 router.post("/",protect,createLearning);
 router.get("/",protect, getLearnings);
 router.put("/:id/review",protect, reviewLearning);
+router.get("/stats", protect, getStats);
+router.get("/:id", protect, getLearning);
+router.put("/:id", protect, updateLearning);
+router.delete("/:id", protect, deleteLearning);
 
 export default router;
 </file>
@@ -4707,7 +5620,9 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+}));
 app.use(express.json());
 
 app.use("/api/users", userRoutes);
@@ -5097,125 +6012,6 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 </files>
 </file>
 
-<file path="server/seed.js">
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
-import User from './models/User.js';
-import Learning from './models/Learning.js';
-import connectDB from './config/db.js';
-
-dotenv.config();
-
-const seedData = async () => {
-  try {
-    await connectDB();
-
-    // 1. CLEAR EXISTING DATA
-    await User.deleteMany({});
-    await Learning.deleteMany({});
-    console.log('🗑️  Cleared existing data...');
-
-    // 2. CREATE A DEMO USER
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('password123', salt);
-
-    const user = await User.create({
-      name: 'Demo User',
-      email: 'demo@example.com',
-      password: hashedPassword,
-    });
-    console.log('👤 Created user: demo@example.com / password123');
-
-    // 3. GENERATE DATES
-    const today = new Date();
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1); // Overdue
-
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
-    // 4. CREATE LEARNING LOGS (Bypassing Controller Logic)
-    const logs = [
-      {
-        user: user._id,
-        topic: 'React Native Navigation',
-        description: 'Understood stack vs tab navigators.',
-        stage: 3,
-        nextReviewDate: today, // DUE TODAY (Shows on Dashboard)
-      },
-      {
-        user: user._id,
-        topic: 'MongoDB Aggregation',
-        description: 'Using $match and $group pipelines.',
-        stage: 1,
-        nextReviewDate: yesterday, // OVERDUE (Shows on Dashboard)
-      },
-      {
-        user: user._id,
-        topic: 'Docker Containers',
-        description: 'How to containerize a MERN app.',
-        stage: 5,
-        nextReviewDate: tomorrow, // FUTURE (Shows on Calendar)
-      },
-      {
-        user: user._id,
-        topic: 'TypeScript Generics',
-        description: 'Using <T> to make reusable components.',
-        stage: 2,
-        nextReviewDate: nextWeek, // FUTURE (Shows on Calendar)
-      },
-      {
-        user: user._id,
-        topic: 'Redux Toolkit',
-        description: 'Managing global state with slices.',
-        stage: 4,
-        nextReviewDate: today, // DUE TODAY
-      },
-    ];
-
-    await Learning.insertMany(logs);
-    console.log(`📚 Inserted ${logs.length} learning logs with custom dates`);
-
-    console.log('✅ Seeding Complete! Press Ctrl+C to exit if it hangs.');
-    process.exit();
-  } catch (error) {
-    console.error('❌ Error seeding data:', error);
-    process.exit(1);
-  }
-};
-
-seedData();
-</file>
-
-<file path=".gitignore">
-# Dependencies
-node_modules/
-
-# Environment Variables (Secrets)
-.env
-.env.local
-.DS_Store
-
-# Expo/Mobile build folders
-.expo/
-dist/
-web-build/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-</file>
-
-<file path="notes.txt">
-server url : https://pattern-retainer.onrender.com
-expo apk link : https://expo.dev/artifacts/eas/fQujxbDxe3Q57xvYn9REyN.apk
-</file>
-
 <file path="package.json">
 {
   "dependencies": {
@@ -5230,15 +6026,28 @@ expo apk link : https://expo.dev/artifacts/eas/fQujxbDxe3Q57xvYn9REyN.apk
 </file>
 
 <file path="client/src/components/DashBoard.jsx">
-import { CheckCircle } from 'lucide-react';
-import axios from 'axios';
+import { CheckCircle, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import api from '../api/axios';
 
 const Dashboard = ({ learnings, onReview }) => {
   const dueItems = learnings.filter(l => new Date(l.nextReviewDate) <= new Date());
 
-  const handleReview = async (id) => {
-    await api.put(`/learnings/${id}/review`);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  const upcomingItems = learnings
+    .filter(l => new Date(l.nextReviewDate) > today)
+    .slice(0, 5);
+
+  const handleReview = async (id, difficulty) => {
+    await api.put(`/learnings/${id}/review`, { difficulty });
+    onReview();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this?')) return;
+    await api.delete(`/learnings/${id}`);
     onReview();
   };
 
@@ -5248,31 +6057,68 @@ const Dashboard = ({ learnings, onReview }) => {
       
       <div className="space-y-4">
         {dueItems.map((item) => (
-          <div key={item._id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border-l-4 border-red-500 dark:border-red-500 hover:shadow-md transition-all">
-            <div className="flex justify-between items-start">
-              <div>
+          <div key={item._id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border-l-4 border-red-500 hover:shadow-md transition-all">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
                 <span className="inline-block px-2 py-1 text-xs font-bold text-red-600 bg-red-50 dark:text-red-300 dark:bg-red-900/30 rounded-full mb-2">
                   Stage {item.stage}
                 </span>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{item.topic}</h3>
                 <p className="text-gray-600 dark:text-gray-300 mt-1">{item.description}</p>
               </div>
-              <button 
-                onClick={() => handleReview(item._id)}
-                className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-medium text-sm transition-colors cursor-pointer"
+              <button
+                onClick={() => handleDelete(item._id)}
+                className="p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer ml-4"
               >
-                <CheckCircle className="w-4 h-4" /> <span className="hidden sm:inline">Mark Reviewed</span>
+                <Trash2 className="w-4 h-4" />
               </button>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => handleReview(item._id, 'hard')} className="flex-1 py-2 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 transition-colors cursor-pointer">Hard</button>
+              <button onClick={() => handleReview(item._id, 'good')} className="flex-1 py-2 rounded-lg text-sm font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition-colors cursor-pointer">Good</button>
+              <button onClick={() => handleReview(item._id, 'easy')} className="flex-1 py-2 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 transition-colors cursor-pointer">Easy</button>
             </div>
           </div>
         ))}
         
         {dueItems.length === 0 && (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 transition-colors">
-            <p className="text-gray-500 dark:text-gray-400">No reviews due today! Great job.</p>
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 transition-colors px-6">
+            <p className="text-gray-500 dark:text-gray-400 font-medium">No reviews due today!</p>
+            {upcomingItems.length > 0 ? (
+              <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                Next up: <span className="font-bold text-indigo-600 dark:text-indigo-400">{upcomingItems[0].topic}</span>
+                {' '}on{' '}
+                <span className="font-medium">{format(new Date(upcomingItems[0].nextReviewDate), 'MMM d')}</span>
+              </div>
+            ) : (
+              <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+                Add something new to get started.
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {upcomingItems.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Coming Up</h2>
+          <div className="space-y-3">
+            {upcomingItems.map((item) => (
+              <div key={item._id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full mr-2">
+                    Stage {item.stage}
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">{item.topic}</span>
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {format(new Date(item.nextReviewDate), 'MMM d')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -5283,13 +6129,13 @@ export default Dashboard;
 <file path="client/src/components/LearningForm.jsx">
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import axios from 'axios';
 import api from '../api/axios';
 
 
 
 const LearningForm = ({ onAdd }) => {
   const [formData, setFormData] = useState({ topic: '', description: '' });
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -5297,6 +6143,8 @@ const LearningForm = ({ onAdd }) => {
 
     await api.post('/learnings', formData);
     setFormData({ topic: '', description: '' });
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
     onAdd();
   };
 
@@ -5325,6 +6173,11 @@ const LearningForm = ({ onAdd }) => {
             onChange={(e) => setFormData({...formData, description: e.target.value})}
           />
         </div>
+        {success && (
+          <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-3 rounded-lg text-sm font-medium text-center">
+            ✓ Added to your schedule!
+          </div>
+        )}
         <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-md cursor-pointer">
           Add to Schedule
         </button>
@@ -5339,7 +6192,6 @@ export default LearningForm;
 <file path="client/src/components/Login.jsx">
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import api from '../api/axios.js'
 
 
@@ -5393,7 +6245,6 @@ export default Login;
 <file path="client/src/components/Register.jsx">
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import api from '../api/axios';
 
 
@@ -5533,7 +6384,7 @@ export default Register;
 
 <file path="client/src/App.jsx">
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 // REPLACE axios with your new api instance
 import api from './api/axios'; 
 import Header from './components/Header.jsx';
@@ -5542,9 +6393,12 @@ import Dashboard from './components/DashBoard.jsx';
 import CalendarView from './components/CalendarView.jsx';
 import Login from './components/Login.jsx';
 import Register from './components/Register.jsx';
+import MainLayout from './components/MainLayout.jsx';
+import NotFound from './components/NotFound.jsx';
 
-function App() {
+function AppContent() {
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loggedInUser = localStorage.getItem('user');
@@ -5558,11 +6412,10 @@ function App() {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    
+    navigate('/login');
   };
 
   return (
-    <Router>
       <div className="min-h-screen font-sans transition-colors duration-200 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
         <Routes>
           <Route 
@@ -5578,85 +6431,87 @@ function App() {
           ) : (
             <Navigate to="/login" />
           )} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
 
-const MainLayout = ({ user, onLogout }) => {
-  const [learnings, setLearnings] = useState([]);
-  const [view, setView] = useState('dashboard');
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
 
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
-
-  const fetchLearnings = async () => {
-    setIsLoading(true);
-    try {
-      
-      const { data } = await api.get('/learnings');
-      setLearnings(data);
-    } catch (error) {
-      console.error("Failed to fetch learnings", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  useEffect(() => { 
-    if(user) fetchLearnings(); 
-  }, [user]);
-
-  
-  return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-           <div className="text-sm text-gray-500">Welcome, <span className="font-bold text-indigo-600 dark:text-indigo-400">{user.name}</span></div>
-           <button onClick={onLogout} className="text-sm text-red-500 hover:text-red-600 font-medium cursor-pointer">Logout</button>
-        </div>
-        
-        <Header 
-          view={view} 
-          setView={setView} 
-          darkMode={darkMode} 
-          setDarkMode={setDarkMode} 
-        /> 
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <LearningForm onAdd={fetchLearnings} />
-          </div>
-          <div className="lg:col-span-2">
-            {isLoading ? (
-               <div className="text-center py-10 text-gray-500">Loading patterns...</div>
-            ) : view === 'dashboard' ? (
-              <Dashboard learnings={learnings} onReview={fetchLearnings} />
-            ) : (
-              <CalendarView learnings={learnings} />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default App;
+</file>
+
+<file path="client/.gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# repomix stuff
+repomix/
+repomix.*
+*.repomix
+
+notes.txt
+
+.env.development
+.env.production
+</file>
+
+<file path=".gitignore">
+# Dependencies
+node_modules/
+
+# Environment Variables (Secrets)
+.env
+.env.local
+.DS_Store
+
+# Expo/Mobile build folders
+.expo/
+dist/
+web-build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+
+# repomix stuff
+repomix/
+repomix.*
+*.repomix
+
+notes.txt
+server/seed.js
 </file>
 
 </files>

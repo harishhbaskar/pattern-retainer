@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import axios from 'axios';
 import api from '../api/axios';
 
 
 
 const LearningForm = ({ onAdd }) => {
   const [formData, setFormData] = useState({ topic: '', description: '' });
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,6 +14,8 @@ const LearningForm = ({ onAdd }) => {
 
     await api.post('/learnings', formData);
     setFormData({ topic: '', description: '' });
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
     onAdd();
   };
 
@@ -42,6 +44,11 @@ const LearningForm = ({ onAdd }) => {
             onChange={(e) => setFormData({...formData, description: e.target.value})}
           />
         </div>
+        {success && (
+          <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-3 rounded-lg text-sm font-medium text-center">
+            ✓ Added to your schedule!
+          </div>
+        )}
         <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-md cursor-pointer">
           Add to Schedule
         </button>

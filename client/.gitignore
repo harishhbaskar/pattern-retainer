@@ -27,3 +27,8 @@ dist-ssr
 repomix/
 repomix.*
 *.repomix
+
+notes.txt
+
+.env.development
+.env.production
