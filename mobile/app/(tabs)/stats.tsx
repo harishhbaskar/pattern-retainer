@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { BookOpen, Clock, CheckCircle, Flame } from 'lucide-react-native';
 import api from '../../utils/api';
 
 type Stats = {
@@ -12,10 +13,10 @@ type Stats = {
 };
 
 const STAT_CONFIGS = [
-  { key: 'totalTopics', label: 'Total Topics', iconBg: 'bg-indigo-900/40', iconColor: '#6366f1' },
-  { key: 'dueToday', label: 'Due Today', iconBg: 'bg-red-900/40', iconColor: '#ef4444' },
-  { key: 'reviewedThisWeek', label: 'Reviewed This Week', iconBg: 'bg-green-900/40', iconColor: '#22c55e' },
-  { key: 'streak', label: 'Day Streak', iconBg: 'bg-amber-900/40', iconColor: '#f59e0b' },
+  { key: 'totalTopics', label: 'Total Topics', iconBg: 'bg-indigo-900/40', iconColor: '#6366f1', Icon: BookOpen },
+  { key: 'dueToday', label: 'Due Today', iconBg: 'bg-red-900/40', iconColor: '#ef4444', Icon: Clock },
+  { key: 'reviewedThisWeek', label: 'Reviewed This Week', iconBg: 'bg-green-900/40', iconColor: '#22c55e', Icon: CheckCircle },
+  { key: 'streak', label: 'Day Streak', iconBg: 'bg-amber-900/40', iconColor: '#f59e0b', Icon: Flame },
 ];
 
 const StatCard = ({
@@ -23,15 +24,17 @@ const StatCard = ({
   value,
   iconBg,
   iconColor,
+  Icon,
 }: {
   label: string;
   value: number;
   iconBg: string;
   iconColor: string;
+  Icon: React.ElementType;
 }) => (
   <View className="flex-1 bg-card border border-card-border rounded-xl p-4 flex-row items-center gap-3">
     <View className={`w-10 h-10 rounded-full ${iconBg} items-center justify-center`}>
-      <Text style={{ color: iconColor, fontSize: 18, fontWeight: 'bold' }}>{value}</Text>
+      <Icon size={20} color={iconColor} />
     </View>
     <View className="flex-1">
       <Text className="text-white text-2xl font-bold">{value}</Text>
@@ -88,6 +91,7 @@ export default function StatsScreen() {
             value={stats[cfg.key as keyof Stats] as number}
             iconBg={cfg.iconBg}
             iconColor={cfg.iconColor}
+            Icon={cfg.Icon}
           />
         ))}
       </View>

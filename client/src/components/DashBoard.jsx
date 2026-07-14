@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { CheckCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../api/axios';
 
 const Dashboard = ({ learnings, onReview }) => {
+  const [error, setError] = useState(null);
   const dueItems = learnings.filter(l => new Date(l.nextReviewDate) <= new Date());
 
   const today = new Date();
@@ -13,19 +15,34 @@ const Dashboard = ({ learnings, onReview }) => {
     .slice(0, 5);
 
   const handleReview = async (id, difficulty) => {
-    await api.put(`/learnings/${id}/review`, { difficulty });
-    onReview();
+    setError(null);
+    try {
+      await api.put(`/learnings/${id}/review`, { difficulty });
+      onReview();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to review learning. Please try again.');
+    }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this?')) return;
-    await api.delete(`/learnings/${id}`);
-    onReview();
+    setError(null);
+    try {
+      await api.delete(`/learnings/${id}`);
+      onReview();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to delete learning. Please try again.');
+    }
   };
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 dark:text-white">Due for Review Today</h2>
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-lg text-sm font-medium">
+          {error}
+        </div>
+      )}
       
       <div className="space-y-4">
         {dueItems.map((item) => (

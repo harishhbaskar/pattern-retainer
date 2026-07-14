@@ -11,6 +11,7 @@ const MainLayout = ({ user, onLogout }) => {
   const [learnings, setLearnings] = useState([]);
   const [view, setView] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   
   useEffect(() => {
     document.documentElement.classList.add('dark');
@@ -18,12 +19,14 @@ const MainLayout = ({ user, onLogout }) => {
 
   const fetchLearnings = async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       
       const { data } = await api.get('/learnings');
       setLearnings(data);
     } catch (error) {
       console.error("Failed to fetch learnings", error);
+      setFetchError('Could not load your learnings. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +57,16 @@ const MainLayout = ({ user, onLogout }) => {
           <div className="lg:col-span-2">
             {isLoading ? (
                <div className="text-center py-10 text-gray-500">Loading patterns...</div>
+            ) : fetchError && view !== 'stats' ? (
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+                <p className="text-red-600 dark:text-red-400 font-medium mb-4">{fetchError}</p>
+                <button
+                  onClick={fetchLearnings}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors cursor-pointer shadow-sm"
+                >
+                  Retry
+                </button>
+              </div>
             ) : view === 'dashboard' ? (
               <Dashboard learnings={learnings} onReview={fetchLearnings} />
             ) : view === 'stats' ? (

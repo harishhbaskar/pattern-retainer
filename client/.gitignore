@@ -23,10 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# repomix stuff
+# Repomix
+repomix-output.xml
 repomix/
 repomix.*
 *.repomix
+
 
 notes.txt
 

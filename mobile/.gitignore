@@ -43,7 +43,8 @@ app-example
 /android
 
 
-# repomix stuff
+# Repomix
+repomix-output.xml
 repomix/
 repomix.*
 *.repomix

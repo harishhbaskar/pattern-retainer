@@ -6,28 +6,45 @@ const AllLearnings = ({ learnings, onUpdate }) => {
   const [editingId, setEditingId] = useState(null);
   const [editTopic, setEditTopic] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [error, setError] = useState(null);
 
   const handleEditStart = (item) => {
+    setError(null);
     setEditingId(item._id);
     setEditTopic(item.topic);
     setEditDescription(item.description);
   };
 
   const handleEditSave = async (id) => {
-    await api.put(`/learnings/${id}`, { topic: editTopic, description: editDescription });
-    setEditingId(null);
-    onUpdate();
+    setError(null);
+    try {
+      await api.put(`/learnings/${id}`, { topic: editTopic, description: editDescription });
+      setEditingId(null);
+      onUpdate();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to update learning. Please try again.');
+    }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this?')) return;
-    await api.delete(`/learnings/${id}`);
-    onUpdate();
+    setError(null);
+    try {
+      await api.delete(`/learnings/${id}`);
+      onUpdate();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to delete learning. Please try again.');
+    }
   };
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-gray-800 dark:text-white">All Learnings ({learnings.length})</h2>
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-lg text-sm font-medium">
+          {error}
+        </div>
+      )}
       {learnings.length === 0 && (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">Nothing logged yet. Add your first learning!</p>

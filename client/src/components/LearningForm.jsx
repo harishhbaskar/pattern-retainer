@@ -7,16 +7,22 @@ import api from '../api/axios';
 const LearningForm = ({ onAdd }) => {
   const [formData, setFormData] = useState({ topic: '', description: '' });
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.topic) return;
+    setError(null);
 
-    await api.post('/learnings', formData);
-    setFormData({ topic: '', description: '' });
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-    onAdd();
+    try {
+      await api.post('/learnings', formData);
+      setFormData({ topic: '', description: '' });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      onAdd();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to add learning. Please try again.');
+    }
   };
 
   return (
@@ -47,6 +53,11 @@ const LearningForm = ({ onAdd }) => {
         {success && (
           <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-3 rounded-lg text-sm font-medium text-center">
             ✓ Added to your schedule!
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-lg text-sm font-medium text-center">
+            {error}
           </div>
         )}
         <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-md cursor-pointer">
