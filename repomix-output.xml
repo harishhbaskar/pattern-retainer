@@ -271,297 +271,6 @@ package.json
 <files>
 This section contains the contents of the repository's files.
 
-<file path="client/src/components/AllLearnings.jsx">
-import { useState } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
-import api from '../api/axios';
-
-const AllLearnings = ({ learnings, onUpdate }) => {
-  const [editingId, setEditingId] = useState(null);
-  const [editTopic, setEditTopic] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-
-  const handleEditStart = (item) => {
-    setEditingId(item._id);
-    setEditTopic(item.topic);
-    setEditDescription(item.description);
-  };
-
-  const handleEditSave = async (id) => {
-    await api.put(`/learnings/${id}`, { topic: editTopic, description: editDescription });
-    setEditingId(null);
-    onUpdate();
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this?')) return;
-    await api.delete(`/learnings/${id}`);
-    onUpdate();
-  };
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white">All Learnings ({learnings.length})</h2>
-      {learnings.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400">Nothing logged yet. Add your first learning!</p>
-        </div>
-      )}
-      {learnings.map((item) => (
-        <div key={item._id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-          {editingId === item._id ? (
-            <div className="space-y-2">
-              <input
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none"
-                value={editTopic}
-                onChange={(e) => setEditTopic(e.target.value)}
-              />
-              <textarea
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none resize-none h-20"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <button onClick={() => handleEditSave(item._id)} className="flex items-center gap-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
-                  <Check className="w-4 h-4" /> Save
-                </button>
-                <button onClick={() => setEditingId(null)} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
-                  <X className="w-4 h-4" /> Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Stage {item.stage}</span>
-                </div>
-                <h3 className="font-bold text-gray-900 dark:text-white">{item.topic}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{item.description}</p>
-              </div>
-              <div className="flex gap-2 ml-4">
-                <button onClick={() => handleEditStart(item)} className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export default AllLearnings;
-</file>
-
-<file path="client/src/components/MainLayout.jsx">
-import { useState, useEffect } from 'react';
-import api from '../api/axios'; 
-import Header from './Header.jsx';
-import LearningForm from './LearningForm.jsx';
-import Dashboard from './DashBoard.jsx'; 
-import CalendarView from './CalendarView.jsx';
-import AllLearnings from './AllLearnings.jsx';
-import StatsPage from './StatsPage.jsx';
-
-const MainLayout = ({ user, onLogout }) => {
-  const [learnings, setLearnings] = useState([]);
-  const [view, setView] = useState('dashboard');
-  const [isLoading, setIsLoading] = useState(false);
-  
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-
-  const fetchLearnings = async () => {
-    setIsLoading(true);
-    try {
-      
-      const { data } = await api.get('/learnings');
-      setLearnings(data);
-    } catch (error) {
-      console.error("Failed to fetch learnings", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  useEffect(() => { 
-    if(user) fetchLearnings(); 
-  }, [user]);
-
-  
-  return (
-    <div className="p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-           <div className="text-sm text-gray-500">Welcome, <span className="font-bold text-indigo-600 dark:text-indigo-400">{user.name}</span></div>
-           <button onClick={onLogout} className="text-sm text-red-500 hover:text-red-600 font-medium cursor-pointer">Logout</button>
-        </div>
-        
-        <Header 
-          view={view} 
-          setView={setView} 
-        /> 
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <LearningForm onAdd={fetchLearnings} />
-          </div>
-          <div className="lg:col-span-2">
-            {isLoading ? (
-               <div className="text-center py-10 text-gray-500">Loading patterns...</div>
-            ) : view === 'dashboard' ? (
-              <Dashboard learnings={learnings} onReview={fetchLearnings} />
-            ) : view === 'stats' ? (
-              <StatsPage />
-            ) : view === 'all' ? (
-              <AllLearnings learnings={learnings} onUpdate={fetchLearnings} />
-            ) : (
-              <CalendarView learnings={learnings} />
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default MainLayout;
-</file>
-
-<file path="client/src/components/NotFound.jsx">
-import { useNavigate } from 'react-router-dom';
-
-const NotFound = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="text-center">
-        <h1 className="text-6xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">404</h1>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">This page doesn't exist.</p>
-        <button
-          onClick={() => navigate('/')}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer"
-        >
-          Go Home
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default NotFound;
-</file>
-
-<file path="client/src/components/StatsPage.jsx">
-import { useEffect, useState } from 'react';
-import { BookOpen, CheckCircle, Flame, Clock } from 'lucide-react';
-import api from '../api/axios';
-
-const StatCard = ({ icon, label, value, color }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4">
-    <div className={`p-3 rounded-full ${color}`}>
-      {icon}
-    </div>
-    <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
-    </div>
-  </div>
-);
-
-const StatsPage = () => {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await api.get('/learnings/stats');
-        setStats(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  if (loading) return (
-    <div className="text-center py-10 text-gray-500">Loading stats...</div>
-  );
-
-  if (!stats) return (
-    <div className="text-center py-10 text-gray-500">Could not load stats.</div>
-  );
-
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white">Your Progress</h2>
-
-      <div className="grid grid-cols-2 gap-4">
-        <StatCard
-          icon={<BookOpen className="w-6 h-6 text-indigo-600" />}
-          label="Total Topics"
-          value={stats.totalTopics}
-          color="bg-indigo-50 dark:bg-indigo-900/30"
-        />
-        <StatCard
-          icon={<Clock className="w-6 h-6 text-red-500" />}
-          label="Due Today"
-          value={stats.dueToday}
-          color="bg-red-50 dark:bg-red-900/30"
-        />
-        <StatCard
-          icon={<CheckCircle className="w-6 h-6 text-green-500" />}
-          label="Reviewed This Week"
-          value={stats.reviewedThisWeek}
-          color="bg-green-50 dark:bg-green-900/30"
-        />
-        <StatCard
-          icon={<Flame className="w-6 h-6 text-orange-500" />}
-          label="Day Streak"
-          value={stats.streak}
-          color="bg-orange-50 dark:bg-orange-900/30"
-        />
-      </div>
-
-      {stats.stageBreakdown.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="font-bold text-gray-800 dark:text-white mb-4">Topics by Stage</h3>
-          <div className="space-y-3">
-            {stats.stageBreakdown.map(({ _id: stage, count }) => (
-              <div key={stage} className="flex items-center gap-3">
-                <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Stage {stage}</span>
-                <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3">
-                  <div
-                    className="bg-indigo-500 h-3 rounded-full transition-all"
-                    style={{ width: `${(count / stats.totalTopics) * 100}%` }}
-                  />
-                </div>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-6">{count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default StatsPage;
-</file>
-
-<file path="client/.env.example">
-VITE_API_URL=http://localhost:5000/api
-</file>
-
 <file path="mobile/.git/hooks/applypatch-msg.sample">
 #!/bin/sh
 #
@@ -1798,6 +1507,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <BarChart2 size={24} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="edit"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
@@ -1935,7 +1650,7 @@ export default function CalendarScreen() {
       
       // If date exists, just ensure it has a dot
       if (!marks[dateKey]) {
-        marks[dateKey] = { marked: true, dotColor: '#AB8BFF' };
+        marks[dateKey] = { marked: true, dotColor: '#6366f1' };
       }
     });
 
@@ -1943,7 +1658,7 @@ export default function CalendarScreen() {
     marks[selectedDate] = {
       ...marks[selectedDate],
       selected: true,
-      selectedColor: '#AB8BFF',
+      selectedColor: '#6366f1',
     };
 
     return marks;
@@ -1976,8 +1691,8 @@ export default function CalendarScreen() {
       <Calendar
         // Dark Mode Styling
         theme={{
-          backgroundColor: '#111827',
-          calendarBackground: '#111827',
+          backgroundColor: '#101828',
+          calendarBackground: '#101828',
           textSectionTitleColor: '#9ca3af',
           selectedDayBackgroundColor: '#6366f1',
           selectedDayTextColor: '#ffffff',
@@ -2285,7 +2000,7 @@ export default function Dashboard() {
               <Text className="text-white text-xl font-bold mb-1">{item.topic}</Text>
               <Text className="text-text-secondary mb-4">{item.description}</Text>
 
-              <View className="flex-row gap-2 mt-3">
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
                 <TouchableOpacity
                   onPress={() => handleReview(item._id, 'hard')}
                   className="flex-1 py-3 rounded-lg items-center bg-red-900/30"
@@ -2347,10 +2062,32 @@ type Stats = {
   stageBreakdown: { _id: number; count: number }[];
 };
 
-const StatCard = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <View className={`flex-1 p-4 rounded-xl ${color} items-center justify-center`}>
-    <Text className="text-white text-3xl font-bold">{value}</Text>
-    <Text className="text-white/80 text-xs mt-1 text-center">{label}</Text>
+const STAT_CONFIGS = [
+  { key: 'totalTopics', label: 'Total Topics', iconBg: 'bg-indigo-900/40', iconColor: '#6366f1' },
+  { key: 'dueToday', label: 'Due Today', iconBg: 'bg-red-900/40', iconColor: '#ef4444' },
+  { key: 'reviewedThisWeek', label: 'Reviewed This Week', iconBg: 'bg-green-900/40', iconColor: '#22c55e' },
+  { key: 'streak', label: 'Day Streak', iconBg: 'bg-amber-900/40', iconColor: '#f59e0b' },
+];
+
+const StatCard = ({
+  label,
+  value,
+  iconBg,
+  iconColor,
+}: {
+  label: string;
+  value: number;
+  iconBg: string;
+  iconColor: string;
+}) => (
+  <View className="flex-1 bg-card border border-card-border rounded-xl p-4 flex-row items-center gap-3">
+    <View className={`w-10 h-10 rounded-full ${iconBg} items-center justify-center`}>
+      <Text style={{ color: iconColor, fontSize: 18, fontWeight: 'bold' }}>{value}</Text>
+    </View>
+    <View className="flex-1">
+      <Text className="text-white text-2xl font-bold">{value}</Text>
+      <Text className="text-text-muted text-xs mt-0.5">{label}</Text>
+    </View>
   </View>
 );
 
@@ -2394,13 +2131,16 @@ export default function StatsScreen() {
     <ScrollView className="flex-1 bg-primary p-4">
       <Text className="text-white text-xl font-bold mb-4">Your Progress</Text>
 
-      <View className="flex-row gap-3 mb-3">
-        <StatCard label="Total Topics" value={stats.totalTopics} color="bg-accent" />
-        <StatCard label="Due Today" value={stats.dueToday} color="bg-danger" />
-      </View>
-      <View className="flex-row gap-3 mb-6">
-        <StatCard label="Reviewed This Week" value={stats.reviewedThisWeek} color="bg-success" />
-        <StatCard label="Day Streak" value={stats.streak} color="bg-warning" />
+      <View style={{ gap: 12 }} className="mb-6">
+        {STAT_CONFIGS.map(cfg => (
+          <StatCard
+            key={cfg.key}
+            label={cfg.label}
+            value={stats[cfg.key as keyof Stats] as number}
+            iconBg={cfg.iconBg}
+            iconColor={cfg.iconColor}
+          />
+        ))}
       </View>
 
       {stats.stageBreakdown.length > 0 && (
@@ -2412,10 +2152,14 @@ export default function StatsScreen() {
                 <Text className="text-text-secondary text-xs">Stage {stage}</Text>
                 <Text className="text-white text-xs">{count}</Text>
               </View>
-              <View className="bg-card-border rounded-full h-2">
+              <View style={{ backgroundColor: '#374151', borderRadius: 9999, height: 8 }}>
                 <View
-                  className="bg-accent rounded-full h-2"
-                  style={{ width: `${(count / maxCount) * 100}%` }}
+                  style={{
+                    backgroundColor: '#6366f1',
+                    borderRadius: 9999,
+                    height: 8,
+                    width: `${(count / maxCount) * 100}%`,
+                  }}
                 />
               </View>
             </View>
@@ -3942,8 +3686,8 @@ module.exports = {
     extend: {
       colors: {
         // Page backgrounds
-        primary: "#111827",    // gray-900 - main page bg
-        secondary: "#111827",  // same, used interchangeably
+        primary: "#101828",    // matching web picked color
+        secondary: "#101828",  // same, used interchangeably
         // Card surfaces
         card: "#1f2937",       // gray-800
         "card-border": "#374151", // gray-700
@@ -3999,254 +3743,299 @@ module.exports = {
 }
 </file>
 
-<file path="server/.env.example">
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-PORT=5000
-ALLOWED_ORIGIN=http://localhost:5173
-</file>
-
-<file path="client/src/api/axios.js">
-import axios from 'axios';
-
-// Automatically switch based on whether Vite is running in development or production mode
-const LOCAL_API_URL = 'http://localhost:5000/api';
-const PROD_API_URL = import.meta.env.VITE_API_URL || 'https://pattern-retainer.onrender.com/api';
-
-const API_URL = import.meta.env.DEV ? LOCAL_API_URL : PROD_API_URL;
-
-const api = axios.create({
-  baseURL: API_URL,
-});
-
-// Request Interceptor
-api.interceptors.request.use(
-  (config) => {
-    // Check localStorage for the user object
-    const userStr = localStorage.getItem('user');
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        // If a token exists, attach it to the headers
-        if (user?.token) {
-          config.headers.Authorization = `Bearer ${user.token}`;
-        }
-      } catch (error) {
-        console.error("Error parsing user from local storage", error);
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Optional: Response Interceptor (to handle 401s automatically)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Optional: Logic to logout user if token expires
-      // localStorage.removeItem('user');
-      // window.location.href = '/login'; 
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default api;
-</file>
-
 <file path="client/src/assets/react.svg">
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
 </file>
 
-<file path="client/src/components/CalendarView.jsx">
+<file path="client/src/components/AllLearnings.jsx">
 import { useState } from 'react';
-import { 
-  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
-  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isBefore
-} from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
+import api from '../api/axios';
 
-const CalendarView = ({ learnings }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(null);
+const AllLearnings = ({ learnings, onUpdate }) => {
+  const [editingId, setEditingId] = useState(null);
+  const [editTopic, setEditTopic] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart);
-  const endDate = endOfWeek(monthEnd);
-  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
-  const getEventsForDay = (date) => {
-    return learnings.filter(l => isSameDay(new Date(l.nextReviewDate), date));
+  const handleEditStart = (item) => {
+    setEditingId(item._id);
+    setEditTopic(item.topic);
+    setEditDescription(item.description);
   };
 
-  const isDayOverdue = (date) => {
-    return isBefore(date, today) && getEventsForDay(date).length > 0;
+  const handleEditSave = async (id) => {
+    await api.put(`/learnings/${id}`, { topic: editTopic, description: editDescription });
+    setEditingId(null);
+    onUpdate();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this?')) return;
+    await api.delete(`/learnings/${id}`);
+    onUpdate();
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
-      {/* Calendar Header */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-        <h2 className="font-bold text-gray-800 dark:text-white">{format(currentDate, 'MMMM yyyy')}</h2>
-        <div className="flex gap-2">
-          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
-            <ChevronLeft className="w-5 h-5"/>
-          </button>
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
-            <ChevronRight className="w-5 h-5"/>
-          </button>
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">All Learnings ({learnings.length})</h2>
+      {learnings.length === 0 && (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400">Nothing logged yet. Add your first learning!</p>
         </div>
-      </div>
-
-      {/* Days Row */}
-      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="py-2">{day}</div>
-        ))}
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 text-sm">
-        {calendarDays.map((day) => {
-          const events = getEventsForDay(day);
-          const isSelectedMonth = day.getMonth() === currentDate.getMonth();
-          
-          return (
-            <div 
-              key={day.toString()} 
-              onClick={() => setSelectedDate(day)}
-              className={`min-h-[80px] p-2 border-b border-r border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors ${
-                !isSelectedMonth 
-                  ? 'bg-gray-50/50 dark:bg-gray-900/30 text-gray-400 dark:text-gray-600' 
-                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
-              } ${selectedDate && isSameDay(day, selectedDate) ? 'ring-2 ring-inset ring-indigo-400' : ''}`}
-            >
-              <div className={`text-right mb-1 ${isToday(day) ? 'font-bold text-indigo-600 dark:text-indigo-400' : ''}`}>
-                <span className={isToday(day) ? 'bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-full' : ''}>
-                  {format(day, 'd')}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {events.map(event => (
-                  <div
-                    key={event._id}
-                    className={`text-[10px] px-1 py-0.5 rounded truncate ${
-                      isBefore(day, today)
-                        ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'
-                    }`}
-                    title={event.topic}
-                  >
-                    {event.topic}
-                  </div>
-                ))}
+      )}
+      {learnings.map((item) => (
+        <div key={item._id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          {editingId === item._id ? (
+            <div className="space-y-2">
+              <input
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none"
+                value={editTopic}
+                onChange={(e) => setEditTopic(e.target.value)}
+              />
+              <textarea
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none resize-none h-20"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button onClick={() => handleEditSave(item._id)} className="flex items-center gap-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
+                  <Check className="w-4 h-4" /> Save
+                </button>
+                <button onClick={() => setEditingId(null)} className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer">
+                  <X className="w-4 h-4" /> Cancel
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {selectedDate && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="font-bold text-gray-800 dark:text-white mb-3">
-            {format(selectedDate, 'MMMM do, yyyy')}
-          </h3>
-          {getEventsForDay(selectedDate).length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Nothing scheduled for this day.</p>
           ) : (
-            <div className="space-y-2">
-              {getEventsForDay(selectedDate).map(event => (
-                <div key={event._id} className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{event.topic}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Stage {event.stage}</p>
-                  </div>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Stage {item.stage}</span>
                 </div>
-              ))}
+                <h3 className="font-bold text-gray-900 dark:text-white">{item.topic}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{item.description}</p>
+              </div>
+              <div className="flex gap-2 ml-4">
+                <button onClick={() => handleEditStart(item)} className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default AllLearnings;
+</file>
+
+<file path="client/src/components/MainLayout.jsx">
+import { useState, useEffect } from 'react';
+import api from '../api/axios'; 
+import Header from './Header.jsx';
+import LearningForm from './LearningForm.jsx';
+import Dashboard from './DashBoard.jsx'; 
+import CalendarView from './CalendarView.jsx';
+import AllLearnings from './AllLearnings.jsx';
+import StatsPage from './StatsPage.jsx';
+
+const MainLayout = ({ user, onLogout }) => {
+  const [learnings, setLearnings] = useState([]);
+  const [view, setView] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  const fetchLearnings = async () => {
+    setIsLoading(true);
+    try {
+      
+      const { data } = await api.get('/learnings');
+      setLearnings(data);
+    } catch (error) {
+      console.error("Failed to fetch learnings", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => { 
+    if(user) fetchLearnings(); 
+  }, [user]);
+
+  
+  return (
+    <div className="p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-4">
+           <div className="text-sm text-gray-500">Welcome, <span className="font-bold text-indigo-600 dark:text-indigo-400">{user.name}</span></div>
+           <button onClick={onLogout} className="text-sm text-red-500 hover:text-red-600 font-medium cursor-pointer">Logout</button>
+        </div>
+        
+        <Header 
+          view={view} 
+          setView={setView} 
+        /> 
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <LearningForm onAdd={fetchLearnings} />
+          </div>
+          <div className="lg:col-span-2">
+            {isLoading ? (
+               <div className="text-center py-10 text-gray-500">Loading patterns...</div>
+            ) : view === 'dashboard' ? (
+              <Dashboard learnings={learnings} onReview={fetchLearnings} />
+            ) : view === 'stats' ? (
+              <StatsPage />
+            ) : view === 'all' ? (
+              <AllLearnings learnings={learnings} onUpdate={fetchLearnings} />
+            ) : (
+              <CalendarView learnings={learnings} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MainLayout;
+</file>
+
+<file path="client/src/components/NotFound.jsx">
+import { useNavigate } from 'react-router-dom';
+
+const NotFound = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-indigo-600 dark:text-indigo-400 mb-4">404</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">This page doesn't exist.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer"
+        >
+          Go Home
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default NotFound;
+</file>
+
+<file path="client/src/components/StatsPage.jsx">
+import { useEffect, useState } from 'react';
+import { BookOpen, CheckCircle, Flame, Clock } from 'lucide-react';
+import api from '../api/axios';
+
+const StatCard = ({ icon, label, value, color }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4">
+    <div className={`p-3 rounded-full ${color}`}>
+      {icon}
+    </div>
+    <div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+    </div>
+  </div>
+);
+
+const StatsPage = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await api.get('/learnings/stats');
+        setStats(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) return (
+    <div className="text-center py-10 text-gray-500">Loading stats...</div>
+  );
+
+  if (!stats) return (
+    <div className="text-center py-10 text-gray-500">Could not load stats.</div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">Your Progress</h2>
+
+      <div className="grid grid-cols-2 gap-4">
+        <StatCard
+          icon={<BookOpen className="w-6 h-6 text-indigo-600" />}
+          label="Total Topics"
+          value={stats.totalTopics}
+          color="bg-indigo-50 dark:bg-indigo-900/30"
+        />
+        <StatCard
+          icon={<Clock className="w-6 h-6 text-red-500" />}
+          label="Due Today"
+          value={stats.dueToday}
+          color="bg-red-50 dark:bg-red-900/30"
+        />
+        <StatCard
+          icon={<CheckCircle className="w-6 h-6 text-green-500" />}
+          label="Reviewed This Week"
+          value={stats.reviewedThisWeek}
+          color="bg-green-50 dark:bg-green-900/30"
+        />
+        <StatCard
+          icon={<Flame className="w-6 h-6 text-orange-500" />}
+          label="Day Streak"
+          value={stats.streak}
+          color="bg-orange-50 dark:bg-orange-900/30"
+        />
+      </div>
+
+      {stats.stageBreakdown.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-white mb-4">Topics by Stage</h3>
+          <div className="space-y-3">
+            {stats.stageBreakdown.map(({ _id: stage, count }) => (
+              <div key={stage} className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Stage {stage}</span>
+                <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3">
+                  <div
+                    className="bg-indigo-500 h-3 rounded-full transition-all"
+                    style={{ width: `${(count / stats.totalTopics) * 100}%` }}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-6">{count}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-export default CalendarView;
-</file>
-
-<file path="client/src/components/Header.jsx">
-import { BookOpen } from 'lucide-react';
-
-const Header = ({ view, setView }) => {
-  return (
-    <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-      <div>
-        
-        <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
-          <BookOpen className="w-8 h-8" /> Pattern Retainer
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Spaced repetition learning logger</p>
-      </div>
-      
-      <div className="flex items-center gap-4">
-        {/* View Toggle */}
-        <div className="flex gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          {['dashboard', 'calendar', 'all', 'stats'].map((v) => (
-            <button 
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-all ${
-                view === v 
-                  ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300' 
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-
-
-      </div>
-    </header>
-  );
-};
-
-export default Header;
+export default StatsPage;
 </file>
 
 <file path="client/src/App.css">
 
-</file>
-
-<file path="client/src/index.css">
-@import "tailwindcss";
-
-@variant dark (&:where(.dark, .dark *));
-
-body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200;
-}
-
-/* Custom scrollbar for dark mode (optional but nice) */
-.dark ::-webkit-scrollbar {
-  width: 8px;
-}
-.dark ::-webkit-scrollbar-track {
-  @apply bg-gray-900;
-}
-.dark ::-webkit-scrollbar-thumb {
-  @apply bg-gray-700 rounded-full;
-}
 </file>
 
 <file path="client/src/main.jsx">
@@ -4260,6 +4049,10 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+</file>
+
+<file path="client/.env.example">
+VITE_API_URL=http://localhost:5000/api
 </file>
 
 <file path="client/eslint.config.js">
@@ -4292,22 +4085,6 @@ export default defineConfig([
     },
   },
 ])
-</file>
-
-<file path="client/index.html">
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href= "/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pattern Retainer</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
 </file>
 
 <file path="client/package.json">
@@ -5267,180 +5044,6 @@ const connectDB = async () => {
 export default connectDB;
 </file>
 
-<file path="server/controllers/learningController.js">
-import Learning from "../models/Learning.js";
-
-
-const calculateNextDate = (stage) => {
-  const MAX_DAYS = 90;
-  const daysToAdd = Math.min(Math.pow(2, stage - 1), MAX_DAYS);
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + daysToAdd);
-  return nextDate;
-};
-
-export const createLearning = async (req, res) => {
-  try {
-    const { topic, description } = req.body;
-
-    if (!topic || topic.trim() === '') {
-      return res.status(400).json({ message: 'Topic is required' });
-    }
-
-    const initialStage = 1;
-    const newLog = new Learning({
-      user: req.user.id,
-      topic: topic.trim(),
-      description: description?.trim() || '',
-      nextReviewDate: calculateNextDate(initialStage),
-      stage: initialStage,
-    });
-
-    await newLog.save();
-    res.status(201).json(newLog);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-export const getLearnings = async (req, res) => {
-  try {
-    
-    const logs = await Learning.find({ user: req.user.id }).sort({ nextReviewDate: 1 });
-    res.json(logs);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-export const reviewLearning = async (req, res) => {
-  try {
-    
-    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
-    
-    if (!log) return res.status(404).json({ message: "Not found" });
-
-    const { difficulty } = req.body;
-
-    if (difficulty === 'hard') {
-      // Hard: stay at same stage (reset interval, don't advance)
-      log.stage = Math.max(1, log.stage - 1);
-    } else if (difficulty === 'easy') {
-      // Easy: skip a stage
-      log.stage += 2;
-    } else {
-      // Good (default): normal progression
-      log.stage += 1;
-    }
-
-    log.nextReviewDate = calculateNextDate(log.stage);
-    log.lastReviewedAt = new Date();
-    await log.save();
-    res.json(log);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getStats = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const now = new Date();
-
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-
-    const totalTopics = await Learning.countDocuments({ user: userId });
-
-    const dueToday = await Learning.countDocuments({
-      user: userId,
-      nextReviewDate: { $lte: now },
-    });
-
-    const reviewedThisWeek = await Learning.countDocuments({
-      user: userId,
-      lastReviewedAt: { $gte: weekStart },
-    });
-
-    const stageBreakdown = await Learning.aggregate([
-      { $match: { user: userId } },
-      { $group: { _id: '$stage', count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // Streak: count consecutive days going back from today that had at least one review
-    const reviews = await Learning.find(
-      { user: userId, lastReviewedAt: { $exists: true } },
-      { lastReviewedAt: 1 }
-    );
-
-    const reviewDays = new Set(
-      reviews.map(r => new Date(r.lastReviewedAt).toDateString())
-    );
-
-    let streak = 0;
-    const check = new Date();
-    while (reviewDays.has(check.toDateString())) {
-      streak++;
-      check.setDate(check.getDate() - 1);
-    }
-
-    res.json({
-      totalTopics,
-      dueToday,
-      reviewedThisWeek,
-      streak,
-      stageBreakdown,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getLearning = async (req, res) => {
-  try {
-    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
-    if (!log) return res.status(404).json({ message: 'Not found' });
-    res.json(log);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const updateLearning = async (req, res) => {
-  try {
-    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
-    if (!log) return res.status(404).json({ message: 'Not found' });
-
-    const { topic, description } = req.body;
-    if (!topic || topic.trim() === '') {
-      return res.status(400).json({ message: 'Topic is required' });
-    }
-
-    log.topic = topic.trim();
-    log.description = description?.trim() || '';
-    await log.save();
-    res.json(log);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const deleteLearning = async (req, res) => {
-  try {
-    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
-    if (!log) return res.status(404).json({ message: 'Not found' });
-    await log.deleteOne();
-    res.json({ message: 'Deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-</file>
-
 <file path="server/controllers/userController.js">
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -5508,53 +5111,6 @@ export const loginUser = async (req, res) => {
 };
 </file>
 
-<file path="server/middlewares/authMiddleware.js">
-import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-
-export const protect = async (req, res, next) => {
-  let token;
-
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      
-      token = req.headers.authorization.split(' ')[1];
-
-      
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    
-      req.user = await User.findById(decoded.id).select('-password');
-
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-  }
-
-  if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
-  }
-};
-</file>
-
-<file path="server/models/Learning.js">
-import mongoose from "mongoose";
-
-const LearningSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  topic: { type: String, required: true },
-  description: { type: String, default: '' },
-  createdAt: { type: Date, default: Date.now },
-  nextReviewDate: { type: Date, required: true },
-  stage: { type: Number, default: 1 },
-  lastReviewedAt: { type: Date }
-});
-
-const Learning = mongoose.model('Learning', LearningSchema);
-export default Learning;
-</file>
-
 <file path="server/models/User.js">
 import mongoose from "mongoose";
 
@@ -5565,32 +5121,6 @@ const UserSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export default mongoose.model("User", UserSchema);
-</file>
-
-<file path="server/routes/learningRoutes.js">
-import express from "express";
-import { 
-  createLearning, 
-  getLearnings, 
-  reviewLearning,
-  deleteLearning,
-  getLearning,
-  updateLearning,
-  getStats
-} from "../controllers/learningController.js";
-import { protect } from "../middlewares/authMiddleware.js";
-
-const router = express.Router();
-
-router.post("/",protect,createLearning);
-router.get("/",protect, getLearnings);
-router.put("/:id/review",protect, reviewLearning);
-router.get("/stats", protect, getStats);
-router.get("/:id", protect, getLearning);
-router.put("/:id", protect, updateLearning);
-router.delete("/:id", protect, deleteLearning);
-
-export default router;
 </file>
 
 <file path="server/routes/userRoutes.js">
@@ -5605,31 +5135,11 @@ router.post('/login', loginUser);
 export default router;
 </file>
 
-<file path="server/index.js">
-import dotenv from "dotenv";
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db.js";
-import learningRoutes from "./routes/learningRoutes.js";
-import userRoutes from "./routes/userRoutes.js";
-
-dotenv.config();
-
-connectDB();
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
-}));
-app.use(express.json());
-
-app.use("/api/users", userRoutes);
-app.use("/api/learnings", learningRoutes);
-
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+<file path="server/.env.example">
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+PORT=5000
+ALLOWED_ORIGIN=http://localhost:5173
 </file>
 
 <file path="server/package.json">
@@ -6023,6 +5533,543 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     "tailwind-merge": "^3.4.0"
   }
 }
+</file>
+
+<file path="client/src/api/axios.js">
+import axios from 'axios';
+
+// Automatically switch based on whether Vite is running in development or production mode
+const LOCAL_API_URL = 'http://localhost:5000/api';
+const PROD_API_URL = import.meta.env.VITE_API_URL || 'https://pattern-retainer.onrender.com/api';
+
+const API_URL = import.meta.env.DEV ? LOCAL_API_URL : PROD_API_URL;
+
+const api = axios.create({
+  baseURL: API_URL,
+});
+
+// Request Interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Check localStorage for the user object
+    const userStr = localStorage.getItem('user');
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        // If a token exists, attach it to the headers
+        if (user?.token) {
+          config.headers.Authorization = `Bearer ${user.token}`;
+        }
+      } catch (error) {
+        console.error("Error parsing user from local storage", error);
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Optional: Response Interceptor (to handle 401s automatically)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Optional: Logic to logout user if token expires
+      // localStorage.removeItem('user');
+      // window.location.href = '/login'; 
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+</file>
+
+<file path="client/src/components/CalendarView.jsx">
+import { useState } from 'react';
+import { 
+  format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
+  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isBefore
+} from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+const CalendarView = ({ learnings }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  const getEventsForDay = (date) => {
+    return learnings.filter(l => isSameDay(new Date(l.nextReviewDate), date));
+  };
+
+  const isDayOverdue = (date) => {
+    return isBefore(date, today) && getEventsForDay(date).length > 0;
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
+      {/* Calendar Header */}
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        <h2 className="font-bold text-gray-800 dark:text-white">{format(currentDate, 'MMMM yyyy')}</h2>
+        <div className="flex gap-2">
+          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
+            <ChevronLeft className="w-5 h-5"/>
+          </button>
+          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
+            <ChevronRight className="w-5 h-5"/>
+          </button>
+        </div>
+      </div>
+
+      {/* Days Row */}
+      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div key={day} className="py-2">{day}</div>
+        ))}
+      </div>
+
+      {/* Calendar Grid */}
+      <div className="grid grid-cols-7 text-sm">
+        {calendarDays.map((day) => {
+          const events = getEventsForDay(day);
+          const isSelectedMonth = day.getMonth() === currentDate.getMonth();
+          
+          return (
+            <div 
+              key={day.toString()} 
+              onClick={() => setSelectedDate(day)}
+              className={`min-h-[80px] p-2 border-b border-r border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors ${
+                !isSelectedMonth 
+                  ? 'bg-gray-50/50 dark:bg-gray-900/30 text-gray-400 dark:text-gray-600' 
+                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+              } ${selectedDate && isSameDay(day, selectedDate) ? 'ring-2 ring-inset ring-indigo-400' : ''}`}
+            >
+              <div className={`text-right mb-1 ${isToday(day) ? 'font-bold text-indigo-600 dark:text-indigo-400' : ''}`}>
+                <span className={isToday(day) ? 'bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-full' : ''}>
+                  {format(day, 'd')}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {events.map(event => (
+                  <div
+                    key={event._id}
+                    className={`text-[10px] px-1 py-0.5 rounded truncate ${
+                      isBefore(day, today)
+                        ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'
+                    }`}
+                    title={event.topic}
+                  >
+                    {event.topic}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedDate && (
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="font-bold text-gray-800 dark:text-white mb-3">
+            {format(selectedDate, 'MMMM do, yyyy')}
+          </h3>
+          {getEventsForDay(selectedDate).length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Nothing scheduled for this day.</p>
+          ) : (
+            <div className="space-y-2">
+              {getEventsForDay(selectedDate).map(event => (
+                <div key={event._id} className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{event.topic}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Stage {event.stage}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CalendarView;
+</file>
+
+<file path="client/src/components/Header.jsx">
+import { BookOpen } from 'lucide-react';
+
+const Header = ({ view, setView }) => {
+  return (
+    <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+      <div>
+        
+        <h1 className="text-3xl font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
+          <BookOpen className="w-8 h-8" /> Pattern Retainer
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Spaced repetition learning logger</p>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        {/* View Toggle */}
+        <div className="flex gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          {['dashboard', 'calendar', 'all', 'stats'].map((v) => {
+            const VIEW_LABELS = {
+              dashboard: 'Dashboard',
+              calendar: 'Calendar',
+              all: 'All',
+              stats: 'Stats',
+            };
+            return (
+              <button 
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  view === v 
+                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            );
+          })}
+        </div>
+
+
+      </div>
+    </header>
+  );
+};
+
+export default Header;
+</file>
+
+<file path="client/src/index.css">
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+body {
+  @apply bg-gray-50 text-gray-900 dark:text-gray-100 transition-colors duration-200;
+}
+
+.dark body {
+  background-color: #101828;
+}
+
+/* Custom scrollbar for dark mode (optional but nice) */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background-color: #101828;
+}
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+}
+</file>
+
+<file path="client/index.html">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href= "/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pattern Retainer</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="server/controllers/learningController.js">
+import Learning from "../models/Learning.js";
+
+
+const calculateNextDate = (stage) => {
+  const MAX_DAYS = 90;
+  const daysToAdd = Math.min(Math.pow(2, stage - 1), MAX_DAYS);
+  const nextDate = new Date();
+  nextDate.setDate(nextDate.getDate() + daysToAdd);
+  return nextDate;
+};
+
+export const createLearning = async (req, res) => {
+  try {
+    const { topic, description } = req.body;
+
+    if (!topic || topic.trim() === '') {
+      return res.status(400).json({ message: 'Topic is required' });
+    }
+
+    const initialStage = 1;
+    const newLog = new Learning({
+      user: req.user.id,
+      topic: topic.trim(),
+      description: description?.trim() || '',
+      nextReviewDate: calculateNextDate(initialStage),
+      stage: initialStage,
+    });
+
+    await newLog.save();
+    res.status(201).json(newLog);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const getLearnings = async (req, res) => {
+  try {
+    
+    const logs = await Learning.find({ user: req.user.id }).sort({ nextReviewDate: 1 });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const reviewLearning = async (req, res) => {
+  try {
+    
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    
+    if (!log) return res.status(404).json({ message: "Not found" });
+
+    const { difficulty } = req.body;
+
+    if (difficulty === 'hard') {
+      // Hard: stay at same stage (reset interval, don't advance)
+      log.stage = Math.max(1, log.stage - 1);
+    } else if (difficulty === 'easy') {
+      // Easy: skip a stage
+      log.stage += 2;
+    } else {
+      // Good (default): normal progression
+      log.stage += 1;
+    }
+
+    log.nextReviewDate = calculateNextDate(log.stage);
+    log.lastReviewedAt = new Date();
+    await log.save();
+    res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const totalTopics = await Learning.countDocuments({ user: userId });
+
+    const dueToday = await Learning.countDocuments({
+      user: userId,
+      nextReviewDate: { $lte: now },
+    });
+
+    const reviewedThisWeek = await Learning.countDocuments({
+      user: userId,
+      lastReviewedAt: { $gte: weekStart },
+    });
+
+    const stageBreakdown = await Learning.aggregate([
+      { $match: { user: userId } },
+      { $group: { _id: '$stage', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Streak: count consecutive days going back from today that had at least one review
+    const reviews = await Learning.find(
+      { user: userId, lastReviewedAt: { $exists: true } },
+      { lastReviewedAt: 1 }
+    );
+
+    const reviewDays = new Set(
+      reviews.map(r => new Date(r.lastReviewedAt).toDateString())
+    );
+
+    let streak = 0;
+    const check = new Date();
+    while (reviewDays.has(check.toDateString())) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    }
+
+    res.json({
+      totalTopics,
+      dueToday,
+      reviewedThisWeek,
+      streak,
+      stageBreakdown,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+    res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+
+    const { topic, description } = req.body;
+    if (!topic || topic.trim() === '') {
+      return res.status(400).json({ message: 'Topic is required' });
+    }
+
+    log.topic = topic.trim();
+    log.description = description?.trim() || '';
+    await log.save();
+    res.json(log);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteLearning = async (req, res) => {
+  try {
+    const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
+    if (!log) return res.status(404).json({ message: 'Not found' });
+    await log.deleteOne();
+    res.json({ message: 'Deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+</file>
+
+<file path="server/middlewares/authMiddleware.js">
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+
+export const protect = async (req, res, next) => {
+  let token;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      
+      token = req.headers.authorization.split(' ')[1];
+
+      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    
+      req.user = await User.findById(decoded.id).select('-password');
+
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+  }
+
+  if (!token) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
+  }
+};
+</file>
+
+<file path="server/models/Learning.js">
+import mongoose from "mongoose";
+
+const LearningSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  topic: { type: String, required: true },
+  description: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now },
+  nextReviewDate: { type: Date, required: true },
+  stage: { type: Number, default: 1 },
+  lastReviewedAt: { type: Date }
+});
+
+const Learning = mongoose.model('Learning', LearningSchema);
+export default Learning;
+</file>
+
+<file path="server/routes/learningRoutes.js">
+import express from "express";
+import { 
+  createLearning, 
+  getLearnings, 
+  reviewLearning,
+  deleteLearning,
+  getLearning,
+  updateLearning,
+  getStats
+} from "../controllers/learningController.js";
+import { protect } from "../middlewares/authMiddleware.js";
+
+const router = express.Router();
+
+router.post("/",protect,createLearning);
+router.get("/",protect, getLearnings);
+router.put("/:id/review",protect, reviewLearning);
+router.get("/stats", protect, getStats);
+router.get("/:id", protect, getLearning);
+router.put("/:id", protect, updateLearning);
+router.delete("/:id", protect, deleteLearning);
+
+export default router;
+</file>
+
+<file path="server/index.js">
+import dotenv from "dotenv";
+import express from "express";
+import cors from "cors";
+import connectDB from "./config/db.js";
+import learningRoutes from "./routes/learningRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+
+dotenv.config();
+
+connectDB();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+}));
+app.use(express.json());
+
+app.use("/api/users", userRoutes);
+app.use("/api/learnings", learningRoutes);
+
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 </file>
 
 <file path="client/src/components/DashBoard.jsx">

@@ -30,5 +30,8 @@ repomix.*
 
 notes.txt
 
-.env.development
-.env.production
+.env
+.env*.local
+!.env.example
+!.env.development
+!.env.production

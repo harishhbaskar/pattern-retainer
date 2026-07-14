@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-// Automatically switch based on whether Vite is running in development or production mode
-const LOCAL_API_URL = 'http://localhost:5000/api';
-const PROD_API_URL = import.meta.env.VITE_API_URL || 'https://pattern-retainer.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
-const API_URL = import.meta.env.DEV ? LOCAL_API_URL : PROD_API_URL;
+if (!API_URL || (typeof API_URL === 'string' && !API_URL.trim())) {
+  throw new Error('Missing VITE_API_URL environment variable');
+}
+
 
 const api = axios.create({
   baseURL: API_URL,
@@ -15,7 +16,7 @@ api.interceptors.request.use(
   (config) => {
     // Check localStorage for the user object
     const userStr = localStorage.getItem('user');
-    
+
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
