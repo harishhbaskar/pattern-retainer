@@ -1,4 +1,5 @@
 import Learning from "../models/Learning.js";
+import Review from "../models/Review.js";
 
 
 const calculateNextDate = (stage) => {
@@ -47,27 +48,46 @@ export const getLearnings = async (req, res) => {
 
 export const reviewLearning = async (req, res) => {
   try {
-    
     const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
     
     if (!log) return res.status(404).json({ message: "Not found" });
 
     const { difficulty } = req.body;
 
+    const validDifficulties = ['hard', 'good', 'easy'];
+    if (!difficulty || !validDifficulties.includes(difficulty)) {
+      return res.status(400).json({ message: "Invalid or missing difficulty. Must be one of: hard, good, easy" });
+    }
+
+    const stageBefore = log.stage;
+
     if (difficulty === 'hard') {
-      // Hard: stay at same stage (reset interval, don't advance)
+      // Hard: decrease stage by 1, with a minimum of stage 1
       log.stage = Math.max(1, log.stage - 1);
     } else if (difficulty === 'easy') {
       // Easy: skip a stage
       log.stage += 2;
-    } else {
+    } else if (difficulty === 'good') {
       // Good (default): normal progression
       log.stage += 1;
     }
 
+    const stageAfter = log.stage;
+    const reviewedAt = new Date();
+
     log.nextReviewDate = calculateNextDate(log.stage);
-    log.lastReviewedAt = new Date();
+    log.lastReviewedAt = reviewedAt;
     await log.save();
+
+    await Review.create({
+      user: req.user.id,
+      learning: log._id,
+      difficulty,
+      stageBefore,
+      stageAfter,
+      reviewedAt,
+    });
+
     res.json(log);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -93,9 +113,9 @@ export const getStats = async (req, res) => {
       nextReviewDate: { $lte: endOfToday },
     });
 
-    const reviewedThisWeek = await Learning.countDocuments({
+    const reviewedThisWeek = await Review.countDocuments({
       user: userId,
-      lastReviewedAt: { $gte: weekStart },
+      reviewedAt: { $gte: weekStart },
     });
 
     const stageBreakdown = await Learning.aggregate([
@@ -105,13 +125,13 @@ export const getStats = async (req, res) => {
     ]);
 
     // Streak: count consecutive days going back from today that had at least one review
-    const reviews = await Learning.find(
-      { user: userId, lastReviewedAt: { $exists: true } },
-      { lastReviewedAt: 1 }
+    const reviews = await Review.find(
+      { user: userId, reviewedAt: { $exists: true } },
+      { reviewedAt: 1 }
     );
 
     const reviewDays = new Set(
-      reviews.map(r => new Date(r.lastReviewedAt).toDateString())
+      reviews.map(r => new Date(r.reviewedAt).toDateString())
     );
 
     let streak = 0;
