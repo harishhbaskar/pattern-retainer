@@ -71,7 +71,7 @@ const MainLayout = ({ user, onLogout }) => {
             </button>
           </div>
         ) : view === 'dashboard' ? (
-          <Dashboard learnings={learnings} onReview={fetchLearnings} />
+          <Dashboard learnings={learnings} onReview={fetchLearnings} user={user} />
         ) : view === 'stats' ? (
           <StatsPage />
         ) : view === 'all' ? (

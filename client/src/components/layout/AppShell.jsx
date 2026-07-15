@@ -105,11 +105,13 @@ const AppShell = ({
 
         {/* Content Area */}
         <div className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
-          <PageHeader
-            title={currentHeader.title}
-            subtitle={currentHeader.subtitle}
-          />
-          <div className="mt-6">
+          {view !== 'dashboard' && (
+            <PageHeader
+              title={currentHeader.title}
+              subtitle={currentHeader.subtitle}
+            />
+          )}
+          <div className={view !== 'dashboard' ? 'mt-6' : ''}>
             {children}
           </div>
         </div>
