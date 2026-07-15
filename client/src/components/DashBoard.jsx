@@ -36,7 +36,7 @@ const Dashboard = ({ learnings, onReview }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-white">Due for Review Today</h2>
+      <h2 className="text-xl font-bold text-gray-800 dark:text-white">Due for Review</h2>
       {error && (
         <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-lg text-sm font-medium">
           {error}

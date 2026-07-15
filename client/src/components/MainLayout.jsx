@@ -56,7 +56,7 @@ const MainLayout = ({ user, onLogout }) => {
           </div>
           <div className="lg:col-span-2">
             {isLoading ? (
-               <div className="text-center py-10 text-gray-500">Loading patterns...</div>
+               <div className="text-center py-10 text-gray-500">Loading learnings...</div>
             ) : fetchError && view !== 'stats' ? (
               <div className="bg-white dark:bg-gray-800 rounded-xl p-8 text-center shadow-sm border border-gray-200 dark:border-gray-700">
                 <p className="text-red-600 dark:text-red-400 font-medium mb-4">{fetchError}</p>
@@ -74,7 +74,7 @@ const MainLayout = ({ user, onLogout }) => {
             ) : view === 'all' ? (
               <AllLearnings learnings={learnings} onUpdate={fetchLearnings} />
             ) : (
-              <CalendarView learnings={learnings} />
+              <CalendarView learnings={learnings} onReview={fetchLearnings} />
             )}
           </div>
         </div>

@@ -16,7 +16,7 @@ type Learning = {
 export default function Dashboard() {
   const router = useRouter();
   const [learnings, setLearnings] = useState<Learning[]>([]);
-  const [nextUpcoming, setNextUpcoming] = useState<Learning | null>(null);
+  const [upcomingLearnings, setUpcomingLearnings] = useState<Learning[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function Dashboard() {
       const upcomingItems = data
         .filter((l: Learning) => new Date(l.nextReviewDate) > endOfToday)
         .sort((a: Learning, b: Learning) => new Date(a.nextReviewDate).getTime() - new Date(b.nextReviewDate).getTime());
-      setNextUpcoming(upcomingItems[0] ?? null);
+      setUpcomingLearnings(upcomingItems.slice(0, 5));
       setLearnings(dueItems);
     } catch (error) {
       console.error(error);
@@ -45,7 +45,7 @@ export default function Dashboard() {
     try {
       await api.delete(`/learnings/${id}`);
       fetchLearnings();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to delete');
     }
   };
@@ -57,8 +57,8 @@ export default function Dashboard() {
       await api.put(`/learnings/${id}/review`, { difficulty });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       fetchLearnings();
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -97,25 +97,47 @@ export default function Dashboard() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
         }
+        ListHeaderComponent={
+          learnings.length > 0 ? (
+            <Text className="text-white text-xl font-bold mb-4">Due for Review</Text>
+          ) : null
+        }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center mt-20 px-4">
-            <Text className="text-text-muted text-lg text-center">
+          <View className="items-center justify-center py-12 px-4 bg-card rounded-xl border border-card-border my-2">
+            <Text className="text-text-muted text-base font-medium text-center">
               No reviews due today!
             </Text>
-            {nextUpcoming ? (
-              <View className="mt-6 bg-card p-4 rounded-xl border border-card-border w-full">
-                <Text className="text-text-muted text-xs uppercase font-bold mb-2">Next Up</Text>
-                <Text className="text-white font-bold text-base">{nextUpcoming.topic}</Text>
-                <Text className="text-text-muted text-xs mt-1">
-                  Due {format(new Date(nextUpcoming.nextReviewDate), 'MMM d')} · Stage {nextUpcoming.stage}
-                </Text>
-              </View>
-            ) : (
+            {upcomingLearnings.length === 0 && (
               <Text className="text-text-muted text-sm mt-2 text-center">
                 Add something new to get started.
               </Text>
             )}
           </View>
+        }
+        ListFooterComponent={
+          upcomingLearnings.length > 0 ? (
+            <View className="mt-6 mb-8">
+              <Text className="text-white text-xl font-bold mb-4">Coming Up</Text>
+              {upcomingLearnings.map((item) => (
+                <View
+                  key={item._id}
+                  className="bg-card p-4 rounded-xl mb-3 border border-card-border flex-row justify-between items-center"
+                >
+                  <View className="flex-row items-center flex-1 mr-2">
+                    <View className="bg-indigo-900/40 px-2.5 py-0.5 rounded-full mr-2">
+                      <Text className="text-indigo-300 font-bold text-xs">Stage {item.stage}</Text>
+                    </View>
+                    <Text className="text-white font-medium text-base flex-1" numberOfLines={1}>
+                      {item.topic}
+                    </Text>
+                  </View>
+                  <Text className="text-text-muted text-xs">
+                    {format(new Date(item.nextReviewDate), 'MMM d')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null
         }
         renderItem={({ item }) => (
           <View className="bg-card p-4 rounded-xl mb-4 border border-card-border border-l-4 border-l-accent">

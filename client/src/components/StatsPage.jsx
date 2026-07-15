@@ -53,7 +53,7 @@ const StatsPage = () => {
         />
         <StatCard
           icon={<Clock className="w-6 h-6 text-red-500" />}
-          label="Due Today"
+          label="Due for Review"
           value={stats.dueToday}
           color="bg-red-50 dark:bg-red-900/30"
         />

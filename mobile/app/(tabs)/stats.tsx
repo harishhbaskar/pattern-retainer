@@ -14,7 +14,7 @@ type Stats = {
 
 const STAT_CONFIGS = [
   { key: 'totalTopics', label: 'Total Topics', iconBg: 'bg-indigo-900/40', iconColor: '#6366f1', Icon: BookOpen },
-  { key: 'dueToday', label: 'Due Today', iconBg: 'bg-red-900/40', iconColor: '#ef4444', Icon: Clock },
+  { key: 'dueToday', label: 'Due for Review', iconBg: 'bg-red-900/40', iconColor: '#ef4444', Icon: Clock },
   { key: 'reviewedThisWeek', label: 'Reviewed This Week', iconBg: 'bg-green-900/40', iconColor: '#22c55e', Icon: CheckCircle },
   { key: 'streak', label: 'Day Streak', iconBg: 'bg-amber-900/40', iconColor: '#f59e0b', Icon: Flame },
 ];
