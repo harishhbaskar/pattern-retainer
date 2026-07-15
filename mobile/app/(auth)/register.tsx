@@ -9,10 +9,15 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
 
   const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.post('/users', { name, email, password });
@@ -52,11 +57,20 @@ export default function Register() {
         />
         
         <TextInput
-          className="w-full bg-input-bg text-white p-4 rounded-lg mb-6 border border-input-border"
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-4 border border-input-border"
           placeholder="Password"
           placeholderTextColor="#9ca3af"
           value={password}
           onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TextInput
+          className="w-full bg-input-bg text-white p-4 rounded-lg mb-6 border border-input-border"
+          placeholder="Confirm Password"
+          placeholderTextColor="#9ca3af"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
           secureTextEntry
         />
 
