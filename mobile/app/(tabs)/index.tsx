@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import api from '../../utils/api';
 import { format, endOfDay } from 'date-fns';
+import { checkAndRequestNotificationPermission } from '../../utils/notifications';
 
 type Learning = {
   _id: string;
@@ -26,6 +27,7 @@ export default function Dashboard() {
     setError(null);
     try {
       const { data } = await api.get('/learnings');
+      checkAndRequestNotificationPermission(data);
       const endOfToday = endOfDay(new Date());
       const dueItems = data.filter((l: Learning) => new Date(l.nextReviewDate) <= endOfToday);
       const upcomingItems = data

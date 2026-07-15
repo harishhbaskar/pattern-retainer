@@ -5,6 +5,7 @@ import { Calendar } from 'react-native-calendars';
 import { useFocusEffect } from 'expo-router';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import api from '../../utils/api';
+import { scheduleOrUpdateDueReviewNotification } from '../../utils/notifications';
 
 type Learning = {
   _id: string;
@@ -28,6 +29,7 @@ export default function CalendarScreen() {
     try {
       const { data } = await api.get('/learnings');
       setLearnings(data);
+      scheduleOrUpdateDueReviewNotification(data);
     } catch (e) {
       console.error(e);
       setError('Failed to load. Please try again.');
@@ -42,6 +44,7 @@ export default function CalendarScreen() {
       await api.put(`/learnings/${id}/review`, { difficulty });
       const { data } = await api.get('/learnings');
       setLearnings(data);
+      scheduleOrUpdateDueReviewNotification(data);
     } catch (e) {
       console.error(e);
     } finally {
