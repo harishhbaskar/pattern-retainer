@@ -2,9 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Swipeable } from 'react-native-gesture-handler';
 import api from '../../utils/api';
-import { format } from 'date-fns';
+import { format, endOfDay } from 'date-fns';
 
 type Learning = {
   _id: string;
@@ -27,10 +26,10 @@ export default function Dashboard() {
     setError(null);
     try {
       const { data } = await api.get('/learnings');
-      const now = new Date();
-      const dueItems = data.filter((l: Learning) => new Date(l.nextReviewDate) <= now);
+      const endOfToday = endOfDay(new Date());
+      const dueItems = data.filter((l: Learning) => new Date(l.nextReviewDate) <= endOfToday);
       const upcomingItems = data
-        .filter((l: Learning) => new Date(l.nextReviewDate) > now)
+        .filter((l: Learning) => new Date(l.nextReviewDate) > endOfToday)
         .sort((a: Learning, b: Learning) => new Date(a.nextReviewDate).getTime() - new Date(b.nextReviewDate).getTime());
       setNextUpcoming(upcomingItems[0] ?? null);
       setLearnings(dueItems);
@@ -51,19 +50,7 @@ export default function Dashboard() {
     }
   };
 
-  const renderRightActions = (id: string) => (
-    <TouchableOpacity
-      onPress={() => {
-        Alert.alert('Delete', 'Are you sure?', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) }
-        ]);
-      }}
-      className="bg-red-500 justify-center items-center px-6 rounded-xl mb-4"
-    >
-      <Text className="text-white font-bold">Delete</Text>
-    </TouchableOpacity>
-  );
+
 
   const handleReview = async (id: string, difficulty: 'hard' | 'good' | 'easy') => {
     try {
@@ -131,59 +118,57 @@ export default function Dashboard() {
           </View>
         }
         renderItem={({ item }) => (
-          <Swipeable renderRightActions={() => renderRightActions(item._id)}>
-            <View className="bg-card p-4 rounded-xl mb-4 border border-card-border border-l-4 border-l-accent">
-              <View className="flex-row justify-between items-start mb-2">
-                <View className="bg-indigo-900/40 px-3 py-1 rounded-full">
-                  <Text className="text-indigo-300 font-bold text-xs">Stage {item.stage}</Text>
-                </View>
-                <Text className="text-text-muted text-xs">{format(new Date(item.nextReviewDate), 'MMM d')}</Text>
+          <View className="bg-card p-4 rounded-xl mb-4 border border-card-border border-l-4 border-l-accent">
+            <View className="flex-row justify-between items-start mb-2">
+              <View className="bg-indigo-900/40 px-3 py-1 rounded-full">
+                <Text className="text-indigo-300 font-bold text-xs">Stage {item.stage}</Text>
               </View>
-              
-              <Text className="text-white text-xl font-bold mb-1">{item.topic}</Text>
-              <Text className="text-text-secondary mb-4">{item.description}</Text>
+              <Text className="text-text-muted text-xs">{format(new Date(item.nextReviewDate), 'MMM d')}</Text>
+            </View>
+            
+            <Text className="text-white text-xl font-bold mb-1">{item.topic}</Text>
+            <Text className="text-text-secondary mb-4">{item.description}</Text>
 
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                <TouchableOpacity
-                  onPress={() => handleReview(item._id, 'hard')}
-                  className="flex-1 py-3 rounded-lg items-center bg-red-900/30"
-                >
-                  <Text className="text-red-400 font-bold text-sm">Hard</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleReview(item._id, 'good')}
-                  className="flex-1 py-3 rounded-lg items-center bg-indigo-900/30"
-                >
-                  <Text className="text-indigo-300 font-bold text-sm">Good</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleReview(item._id, 'easy')}
-                  className="flex-1 py-3 rounded-lg items-center bg-green-900/30"
-                >
-                  <Text className="text-green-400 font-bold text-sm">Easy</Text>
-                </TouchableOpacity>
-              </View>
-
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <TouchableOpacity
-                onPress={() => router.push({ pathname: '/(tabs)/edit', params: { id: item._id } })}
-                className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+                onPress={() => handleReview(item._id, 'hard')}
+                className="flex-1 py-3 rounded-lg items-center bg-red-900/30"
               >
-                <Text className="text-white font-bold">Edit</Text>
+                <Text className="text-red-400 font-bold text-sm">Hard</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                onPress={() => {
-                  Alert.alert('Delete', 'Are you sure?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) }
-                  ]);
-                }}
-                className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+                onPress={() => handleReview(item._id, 'good')}
+                className="flex-1 py-3 rounded-lg items-center bg-indigo-900/30"
               >
-                <Text className="text-red-400 font-bold">Delete</Text>
+                <Text className="text-indigo-300 font-bold text-sm">Good</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleReview(item._id, 'easy')}
+                className="flex-1 py-3 rounded-lg items-center bg-green-900/30"
+              >
+                <Text className="text-green-400 font-bold text-sm">Easy</Text>
               </TouchableOpacity>
             </View>
-          </Swipeable>
+
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(tabs)/edit', params: { id: item._id } })}
+              className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+            >
+              <Text className="text-white font-bold">Edit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert('Delete', 'Are you sure?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => handleDelete(item._id) }
+                ]);
+              }}
+              className="flex-row items-center justify-center bg-card-border py-3 rounded-lg mt-2"
+            >
+              <Text className="text-red-400 font-bold">Delete</Text>
+            </TouchableOpacity>
+          </View>
         )}
       />
     </View>

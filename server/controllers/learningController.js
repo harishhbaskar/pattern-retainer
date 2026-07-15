@@ -83,11 +83,14 @@ export const getStats = async (req, res) => {
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     weekStart.setHours(0, 0, 0, 0);
 
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
     const totalTopics = await Learning.countDocuments({ user: userId });
 
     const dueToday = await Learning.countDocuments({
       user: userId,
-      nextReviewDate: { $lte: now },
+      nextReviewDate: { $lte: endOfToday },
     });
 
     const reviewedThisWeek = await Learning.countDocuments({

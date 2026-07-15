@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { CheckCircle, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, endOfDay } from 'date-fns';
 import api from '../api/axios';
 
 const Dashboard = ({ learnings, onReview }) => {
   const [error, setError] = useState(null);
-  const dueItems = learnings.filter(l => new Date(l.nextReviewDate) <= new Date());
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
+  const endOfToday = endOfDay(new Date());
+  const dueItems = learnings.filter(l => new Date(l.nextReviewDate) <= endOfToday);
 
   const upcomingItems = learnings
-    .filter(l => new Date(l.nextReviewDate) > today)
+    .filter(l => new Date(l.nextReviewDate) > endOfToday)
+    .sort((a, b) => new Date(a.nextReviewDate) - new Date(b.nextReviewDate))
     .slice(0, 5);
 
   const handleReview = async (id, difficulty) => {
