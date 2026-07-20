@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
@@ -17,10 +17,14 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-async-handler": "^1.2.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.2"
+    "mongoose": "^9.1.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.2.2"
   }
 }
