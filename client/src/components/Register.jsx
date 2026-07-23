@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
-
-
 const Register = ({ setUser }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -33,20 +31,17 @@ const Register = ({ setUser }) => {
     }
 
     try {
-      
-      // const res = await axios.post('http://localhost:5000/api/users', {
       const res = await api.post('/users', {
-            name,
-            email,
-            password,
-          });
+        name,
+        email,
+        password,
+      });
 
       localStorage.setItem('user', JSON.stringify(res.data));
       setUser(res.data);
       
       navigate('/');
     } catch (err) {
-      
       setError(err.response?.data?.message || 'Registration failed');
     }
   };

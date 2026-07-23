@@ -16,11 +16,13 @@ function AppContent() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Ensure dark mode is active globally for a unified premium dark theme
+    document.documentElement.classList.add('dark');
+
     const loggedInUser = localStorage.getItem('user');
     if (loggedInUser) {
       const foundUser = JSON.parse(loggedInUser);
       setUser(foundUser);
-  
     }
   }, []);
 

@@ -24,3 +24,4 @@ repomix.*
 notes.txt
 notes/
 server/seed.js
+server/repomix-output.xml
