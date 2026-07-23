@@ -1,5 +1,6 @@
 import asyncHandler from 'express-async-handler';
 import Learning from "../models/Learning.js";
+import Review from "../models/Review.js";
 import { calculateNextDate } from "../utils/spacedRepetition.js";
 
 export const createLearning = asyncHandler(async (req, res) => {
@@ -27,31 +28,51 @@ export const getLearnings = asyncHandler(async (req, res) => {
 
 export const reviewLearning = asyncHandler(async (req, res) => {
   const log = await Learning.findOne({ _id: req.params.id, user: req.user.id });
-  
+
   if (!log) {
     res.status(404);
     throw new Error("Learning log not found");
   }
 
   const { difficulty } = req.body;
+  const validDifficulties = ['hard', 'good', 'easy'];
+  if (!difficulty || !validDifficulties.includes(difficulty)) {
+    res.status(400);
+    throw new Error("Invalid or missing difficulty. Must be one of: hard, good, easy");
+  }
+
+  const stageBefore = log.stage;
 
   if (difficulty === 'hard') {
     log.stage = Math.max(1, log.stage - 1);
   } else if (difficulty === 'easy') {
     log.stage += 2;
-  } else {
+  } else if (difficulty === 'good') {
     log.stage += 1;
   }
 
+  const stageAfter = log.stage;
+  const reviewedAt = new Date();
+
   log.nextReviewDate = calculateNextDate(log.stage);
-  log.lastReviewedAt = new Date();
+  log.lastReviewedAt = reviewedAt;
   await log.save();
+
+  await Review.create({
+    user: req.user.id,
+    learning: log._id,
+    difficulty,
+    stageBefore,
+    stageAfter,
+    reviewedAt,
+  });
+
   res.json(log);
 });
 
 export const getStats = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  
+
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   weekStart.setHours(0, 0, 0, 0);
@@ -66,9 +87,9 @@ export const getStats = asyncHandler(async (req, res) => {
     nextReviewDate: { $lte: endOfToday },
   });
 
-  const reviewedThisWeek = await Learning.countDocuments({
+  const reviewedThisWeek = await Review.countDocuments({
     user: userId,
-    lastReviewedAt: { $gte: weekStart },
+    reviewedAt: { $gte: weekStart },
   });
 
   const stageBreakdown = await Learning.aggregate([
@@ -77,13 +98,14 @@ export const getStats = asyncHandler(async (req, res) => {
     { $sort: { _id: 1 } },
   ]);
 
-  const reviews = await Learning.find(
-    { user: userId, lastReviewedAt: { $exists: true } },
-    { lastReviewedAt: 1 }
+  // Streak: count consecutive days going back from today that had at least one review
+  const reviews = await Review.find(
+    { user: userId, reviewedAt: { $exists: true } },
+    { reviewedAt: 1 }
   );
 
   const reviewDays = new Set(
-    reviews.map(r => new Date(r.lastReviewedAt).toDateString())
+    reviews.map(r => new Date(r.reviewedAt).toDateString())
   );
 
   let streak = 0;
@@ -119,7 +141,7 @@ export const updateLearning = asyncHandler(async (req, res) => {
   }
 
   const { topic, description } = req.body;
-  
+
   log.topic = topic.trim();
   log.description = description?.trim() || '';
   await log.save();
