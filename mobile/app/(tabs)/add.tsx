@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../utils/api';
+import { scheduleOrUpdateDueReviewNotification } from '../../utils/notifications';
 
 export default function AddLearning() {
   const [topic, setTopic] = useState('');
@@ -17,6 +18,12 @@ export default function AddLearning() {
 
     try {
       await api.post('/learnings', { topic, description });
+      try {
+        const { data } = await api.get('/learnings');
+        scheduleOrUpdateDueReviewNotification(data);
+      } catch {
+        // silently continue if background fetch fails
+      }
       setTopic('');
       setDescription('');
       Alert.alert('Success', 'Learning logged!');

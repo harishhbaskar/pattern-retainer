@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicat
 import { useFocusEffect, useRouter } from 'expo-router';
 import api from '../../utils/api';
 import { format } from 'date-fns';
+import { scheduleOrUpdateDueReviewNotification } from '../../utils/notifications';
 
 type Learning = {
   _id: string;
@@ -32,6 +33,7 @@ export default function LearningsScreen() {
     try {
       const { data } = await api.get('/learnings');
       setLearnings(data);
+      scheduleOrUpdateDueReviewNotification(data);
       setError(null);
     } catch (err: any) {
       console.error('Failed to fetch learnings:', err);

@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { 
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
-  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isBefore
+  eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isBefore, startOfDay, endOfDay
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../api/axios';
 
-const CalendarView = ({ learnings }) => {
+const CalendarView = ({ learnings, onReview }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [error, setError] = useState(null);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
@@ -22,8 +24,14 @@ const CalendarView = ({ learnings }) => {
     return learnings.filter(l => isSameDay(new Date(l.nextReviewDate), date));
   };
 
-  const isDayOverdue = (date) => {
-    return isBefore(date, today) && getEventsForDay(date).length > 0;
+  const handleReview = async (id, difficulty) => {
+    setError(null);
+    try {
+      await api.put(`/learnings/${id}/review`, { difficulty });
+      if (onReview) onReview();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to review learning. Please try again.');
+    }
   };
 
   return (
@@ -74,8 +82,10 @@ const CalendarView = ({ learnings }) => {
                   <div
                     key={event._id}
                     className={`text-[10px] px-1 py-0.5 rounded truncate ${
-                      isBefore(day, today)
+                      isBefore(day, startOfDay(new Date()))
                         ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                        : isToday(day)
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200'
                         : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-200'
                     }`}
                     title={event.topic}
@@ -89,23 +99,59 @@ const CalendarView = ({ learnings }) => {
         })}
       </div>
 
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-4 p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+          <span className="text-gray-600 dark:text-gray-400">Overdue</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span className="text-gray-600 dark:text-gray-400">Due Today</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+          <span className="text-gray-600 dark:text-gray-400">Upcoming</span>
+        </div>
+      </div>
+
       {selectedDate && (
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <h3 className="font-bold text-gray-800 dark:text-white mb-3">
             {format(selectedDate, 'MMMM do, yyyy')}
           </h3>
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-lg text-sm font-medium mb-3">
+              {error}
+            </div>
+          )}
           {getEventsForDay(selectedDate).length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 text-sm">Nothing scheduled for this day.</p>
           ) : (
-            <div className="space-y-2">
-              {getEventsForDay(selectedDate).map(event => (
-                <div key={event._id} className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{event.topic}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Stage {event.stage}</p>
+            <div className="space-y-3">
+              {getEventsForDay(selectedDate).map(event => {
+                const isActionable = new Date(event.nextReviewDate) <= endOfDay(new Date());
+                return (
+                  <div key={event._id} className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-between items-center mb-1">
+                      <div>
+                        <span className="inline-block px-2 py-0.5 text-xs font-bold text-indigo-600 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-900/30 rounded-full mb-1">
+                          Stage {event.stage}
+                        </span>
+                        <p className="font-medium text-gray-900 dark:text-white">{event.topic}</p>
+                        {event.description && <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{event.description}</p>}
+                      </div>
+                    </div>
+                    {isActionable && (
+                      <div className="flex gap-2 mt-3">
+                        <button onClick={() => handleReview(event._id, 'hard')} className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 hover:bg-red-100 transition-colors cursor-pointer">Hard</button>
+                        <button onClick={() => handleReview(event._id, 'good')} className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition-colors cursor-pointer">Good</button>
+                        <button onClick={() => handleReview(event._id, 'easy')} className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 transition-colors cursor-pointer">Easy</button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

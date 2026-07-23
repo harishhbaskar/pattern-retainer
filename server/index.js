@@ -4,6 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import learningRoutes from "./routes/learningRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
 
@@ -46,5 +47,6 @@ app.use(express.json());
 app.use("/api/users", userRoutes);
 app.use("/api/learnings", learningRoutes);
 
+app.use(errorHandler);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
